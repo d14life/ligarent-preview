@@ -612,7 +612,7 @@
     const next = clamp(scrollY + motionDirection * elapsed * SCROLL_PIXELS_PER_SECOND * motionSpeed, 0, totalDistance);
     scrollTo({ top: next, behavior: 'auto' });
     scheduleRender();
-    if (next <= 0 || next >= totalDistance) {
+    if ((motionDirection < 0 && next <= 0) || (motionDirection > 0 && next >= totalDistance)) {
       renderScroll();
       finishMotion();
       return;
@@ -689,7 +689,7 @@
     link.setAttribute('aria-busy', 'true');
     activeActionLink = link;
     skipButton.textContent = destination.hash === '#enquiry' ? 'Открываем заявку…' : 'Открываем машины…';
-    continueMotion(1, 3, destination.hash);
+    continueMotion(1, 10, destination.hash);
   });
   trigger.addEventListener('click', () => continueMotion(1));
   skipButton.addEventListener('click', () => continueMotion(1, 10));
