@@ -9,8 +9,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="start-dark.css?v=20260927-moving-sign-2">
-  <script src="vendor/gsap.min.js" defer></script>
-  <script src="start.js?v=20260927-cta-top-10x-4" defer></script>
+  <script src="start.js?v=20260927-first-video-only-6" defer></script>
 </head>
 <body class="is-loading">
   <div class="asset-loader" id="asset-loader" role="status" aria-label="Загрузка видео и сайта" aria-busy="true">
@@ -60,20 +59,12 @@
 
   <div class="film-stage" id="film-stage" role="region" aria-label="Вступительное видео">
     <video id="film" muted playsinline preload="auto" poster="assets/ligarent-video1-seedream-v5-pro-first-2048.png"></video>
-    <div class="film-stage__offer" id="film-offer" aria-hidden="true">
-      <strong>Аренда бульдозеров с оператором.</strong>
-    </div>
   </div>
   <button class="film-stage__skip" id="film-skip" type="button" hidden>Перейти к сайту</button>
 
   <!-- The actual website loads live from site.html. -->
   <div class="site-stage" id="site-stage" aria-hidden="true" inert>
     <iframe id="live-site" data-src="./site.html" title="LIGARENT — действующий сайт" loading="eager" tabindex="-1"></iframe>
-  </div>
-
-  <div class="film-stage__mark" id="film-mark" aria-hidden="true">
-    <img src="assets/ligarent-ground-sign.png" alt="">
-    <span class="film-stage__mark-clean">LIGARENT</span>
   </div>
 
   <button class="headline-editor__toggle" id="editor-toggle" type="button" aria-controls="headline-editor" aria-expanded="false" hidden>Настроить текст</button>

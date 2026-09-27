@@ -4,13 +4,9 @@
   const runway = document.getElementById('poster-runway');
   const filmStage = document.getElementById('film-stage');
   const film = document.getElementById('film');
-  const filmOffer = document.getElementById('film-offer');
   const skipButton = document.getElementById('film-skip');
   const siteStage = document.getElementById('site-stage');
   const siteFrame = document.getElementById('live-site');
-  const mark = document.getElementById('film-mark');
-  const markImage = mark.querySelector('img');
-  const markClean = mark.querySelector('.film-stage__mark-clean');
   const headline = document.getElementById('hero-title');
   const details = [...poster.querySelectorAll('.poster__details > span')];
   const editor = document.getElementById('headline-editor');
@@ -31,8 +27,8 @@
   // Scrubbing a long-GOP 4K stream can require decoding several seconds for
   // every seek. These short-GOP variants put a keyframe every six frames.
   const videoPath = innerWidth <= 1280 || matchMedia('(pointer: coarse)').matches
-    ? 'assets/ligarent-intro-scroll-1080p-scrub.mp4'
-    : 'assets/ligarent-intro-scroll-1440p-scrub.mp4';
+    ? 'assets/ligarent-intro-first-1080p-scrub.mp4'
+    : 'assets/ligarent-intro-first-1440p-scrub.mp4';
   const sitePages = ['site.html', 'selection.html', 'work.html', 'geography.html', 'faq.html', 'enquiry.html'];
   // Every first-party image used by the current site, including its later sections.
   const siteMedia = [
@@ -40,7 +36,7 @@
     'bulldozer-front-transparent.png', 'bulldozer-front.png', 'bulldozer-mark-yellow.svg',
     'bulldozer-mark.svg', 'bulldozer-top-landscape.png', 'bulldozer-top-portrait-transparent.png',
     'bulldozer-top-portrait.png', 'd6r-drawing.png', 'd6r.png', 'd7r-drawing.png', 'd7r.png',
-    'd8r-drawing.png', 'd8r.png', 'intro-first-frame.jpg', 'ligarent-video1-seedream-v5-pro-first-2048.png', 'ligarent-ground-sign.png',
+    'd8r-drawing.png', 'd8r.png', 'intro-first-frame.jpg', 'ligarent-video1-seedream-v5-pro-first-2048.png',
     'map-kaleykino.webp', 'road-mark.svg', 'work-0.jpg', 'work-1.jpg', 'work-10.jpg',
     'work-11.jpg', 'work-15.jpg', 'work-2.jpg', 'work-3.jpg', 'work-4.jpg', 'work-5.jpg',
     'work-6.jpg', 'work-7.jpg', 'work-8.jpg', 'work-9.jpg'
@@ -54,10 +50,8 @@
   const FIRST_CLIP_END = 7.25;
   const SCROLL_PIXELS_PER_SECOND = 180;
   const IDLE_MOTION_SPEED = 2;
-  const FINAL_FRAME_HOLD_SECONDS = 2;
   let leadDistance = 0;
   let videoDistance = 0;
-  let holdDistance = 0;
   let filmDistance = 0;
   let handoffDistance = 0;
   let totalDistance = 0;
@@ -69,8 +63,6 @@
   let lastMotionTime = 0;
   let pendingSiteHash = null;
   let activeActionLink = null;
-  let signTimeline = null;
-  let signLogoTarget = null;
   let occlusionMetrics = null;
   let lastVideoSeekAt = 0;
 
@@ -239,7 +231,6 @@
       const remaining = Math.max(0, 450 - (performance.now() - started));
       if (remaining) await new Promise(resolve => setTimeout(resolve, remaining));
       updateScrollLayout();
-      fitFilmOffer();
       renderScroll();
       loader.classList.add('is-done');
       setTimeout(() => {
@@ -348,51 +339,13 @@
   enablePositionDrag(headline, 'x', 'y');
   details.forEach((detail, index) => enablePositionDrag(detail, `detail${index + 1}X`, `detail${index + 1}Y`));
 
-  function siteLogo() {
-    try {
-      return siteFrame.contentDocument?.querySelector('.site-brand .logo') || null;
-    } catch (_) { /* A future cross-origin site still gets the fallback landing. */ }
-    return null;
-  }
-
-  function siteLogoRect() {
-    const logo = siteLogo();
-    if (logo) {
-      const frame = siteFrame.getBoundingClientRect();
-      const rect = logo.getBoundingClientRect();
-      return { left: frame.left + rect.left - 7, top: frame.top + rect.top, width: rect.width + 14, height: rect.height };
-    }
-    return { left: Math.max(22, innerWidth * .04), top: 20, width: 150, height: 35 };
-  }
-
   function updateScrollLayout() {
     leadDistance = Math.max(380, innerHeight * .58);
-    videoDistance = reduceMotion ? 0 : Math.max(0, film.duration - 1 / 24) * SCROLL_PIXELS_PER_SECOND;
-    holdDistance = reduceMotion ? 0 : FINAL_FRAME_HOLD_SECONDS * SCROLL_PIXELS_PER_SECOND;
-    filmDistance = videoDistance + holdDistance;
-    handoffDistance = Math.max(650, innerHeight * .95);
+    videoDistance = reduceMotion ? 0 : Math.min(FIRST_CLIP_END, Math.max(0, film.duration - 1 / 24)) * SCROLL_PIXELS_PER_SECOND;
+    filmDistance = videoDistance;
+    handoffDistance = Math.max(300, innerHeight * .45);
     totalDistance = leadDistance + filmDistance + handoffDistance;
     runway.style.height = `${totalDistance}px`;
-  }
-
-  function fitFilmOffer() {
-    const text = filmOffer.querySelector('strong');
-    const available = innerWidth - filmOffer.getBoundingClientRect().left - 24;
-    const fit = Math.min(.95, .96 * available / Math.max(1, text.scrollWidth));
-    filmOffer.style.setProperty('--offer-fit', String(Math.max(.18, fit)));
-  }
-
-  function signStartRect() {
-    const stage = filmStage.getBoundingClientRect();
-    const scale = Math.max(stage.width / 1280, stage.height / 720);
-    const offsetX = (stage.width - 1280 * scale) * (innerWidth <= 600 ? .63 : .5);
-    const offsetY = (stage.height - 720 * scale) / 2;
-    return {
-      left: stage.left + offsetX + 344 * scale,
-      top: stage.top + offsetY + 126 * scale,
-      width: 312 * scale,
-      height: 85 * scale
-    };
   }
 
   // Left edge of the approaching bulldozer/blade in the 1280 × 720 video.
@@ -452,64 +405,6 @@
     headline.style.clipPath = `polygon(0 0, ${points.join(', ')}, 0 100%)`;
   }
 
-  function renderFilmOffer(time, holdProgress, active) {
-    // In clip three the buried LIGARENT sign first appears around 17.7s.
-    // Let the message outlast the moving footage on its final frame, then
-    // clear it just before the sign-to-site handoff in either scroll direction.
-    const rise = active ? smoothstep(17.55, 18.8, time) : 0;
-    const fade = active ? 1 - smoothstep(.6, 1, holdProgress) : 0;
-    filmOffer.style.setProperty('--offer-opacity', String(rise * fade));
-    filmOffer.style.setProperty('--offer-rise', `${Math.round(64 * (1 - rise))}px`);
-    filmOffer.style.setProperty('--offer-hold-shift', `${Math.round(innerHeight * .45 * smoothstep(21.7, 23.4, time))}px`);
-    filmOffer.style.setProperty('--offer-scale', String(.94 + .06 * rise));
-  }
-
-  function buildSignTimeline() {
-    const logo = siteLogo();
-    if (reduceMotion || !window.gsap || !logo) return;
-    signTimeline?.kill();
-    const start = signStartRect();
-    const end = siteLogoRect();
-    gsap.set(mark, {
-      left: start.left, top: start.top, width: start.width, height: start.height,
-      x: 0, y: 0, scaleX: 1, scaleY: 1, transformOrigin: 'top left'
-    });
-    gsap.set(markImage, { opacity: 1 });
-    gsap.set(markClean, { opacity: 0 });
-    gsap.set(logo, { opacity: 0 });
-    signTimeline = gsap.timeline({ paused: true });
-    signTimeline.to(mark, {
-      x: end.left - start.left,
-      y: end.top - start.top,
-      scaleX: end.width / start.width,
-      scaleY: end.height / start.height,
-      duration: .82,
-      ease: 'power2.inOut'
-    }, .08);
-    // Change the moving sign's face halfway through its journey. It is still
-    // one moving mark; the actual site logo only takes over at the destination.
-    signTimeline.to(markImage, { opacity: 0, duration: .24, ease: 'power1.inOut' }, .3);
-    signTimeline.to(markClean, { opacity: 1, duration: .24, ease: 'power1.inOut' }, .3);
-    signTimeline.to(markClean, { opacity: 0, duration: .1, ease: 'power1.inOut' }, .9);
-    signTimeline.to(logo, { opacity: 1, duration: .1, ease: 'power1.inOut' }, .9);
-    signTimeline.progress(0).pause();
-    signLogoTarget = logo;
-  }
-
-  function renderSign(progress) {
-    if (reduceMotion) {
-      mark.style.display = 'none';
-      return;
-    }
-    if (siteLogo() !== signLogoTarget) buildSignTimeline();
-    if (!signTimeline) {
-      mark.style.display = 'none';
-      return;
-    }
-    signTimeline.progress(progress).pause();
-    mark.style.display = progress > 0 && progress < .999 ? 'block' : 'none';
-  }
-
   function setSiteInteractive(active) {
     if (siteInteractive === active) return;
     siteInteractive = active;
@@ -523,18 +418,16 @@
     if (!assetsReady) return;
     const distance = clamp(scrollY, 0, totalDistance);
     const lead = clamp(distance / leadDistance);
-    const filmTime = reduceMotion ? 0 : clamp((distance - leadDistance) / SCROLL_PIXELS_PER_SECOND, 0, Math.max(0, film.duration - 1 / 24));
-    const holdProgress = holdDistance ? clamp((distance - leadDistance - videoDistance) / holdDistance) : 1;
+    const filmTime = reduceMotion ? 0 : clamp((distance - leadDistance) / SCROLL_PIXELS_PER_SECOND, 0, FIRST_CLIP_END);
     const first = reduceMotion ? 1 : clamp(filmTime / FIRST_CLIP_END);
     const outro = clamp((distance - leadDistance - filmDistance) / handoffDistance);
     const otherUi = 1 - smoothstep(.03, .9, lead);
     const titleOpacity = reduceMotion ? 1 - lead : 1;
     const brandCover = reduceMotion ? 100 * lead : 100 * smoothstep(.69, .98, first);
 
-    // The last video frame is already black except for its sign. Swap that
-    // embedded sign for the aligned moving mark before moving it, so there
-    // can never be two copies on screen during the handoff.
-    filmStage.style.opacity = outro > 0 ? '0' : String(smoothstep(0, .72, lead));
+    // The first clip ends on the bulldozer tracks; dissolve directly into
+    // the live site instead of playing the later dirt/sign clips.
+    filmStage.style.opacity = String(smoothstep(0, .72, lead) * (1 - smoothstep(0, .8, outro)));
     poster.style.setProperty('--intro-still-opacity', String(1 - smoothstep(.12, .8, lead)));
     poster.style.setProperty('--intro-gradient-opacity', String(1 - smoothstep(.08, .95, lead)));
     poster.style.setProperty('--intro-chrome-opacity', String(1 - smoothstep(0, .72, lead)));
@@ -552,14 +445,11 @@
       film.currentTime = filmTime;
     }
     renderHeadlineOcclusion(filmTime, !reduceMotion && distance >= leadDistance);
-    renderFilmOffer(filmTime, holdProgress, !reduceMotion && distance >= leadDistance && outro === 0);
-
-    siteStage.style.opacity = String(smoothstep(.28, .94, outro));
+    siteStage.style.opacity = String(smoothstep(0, .8, outro));
     setSiteInteractive(outro >= .995);
     const posterInteractive = distance < leadDistance * .92;
     poster.inert = !posterInteractive;
     poster.setAttribute('aria-hidden', String(!posterInteractive));
-    renderSign(outro);
     skipButton.hidden = reduceMotion || distance < leadDistance * .7 || outro > 0;
     document.body.dataset.phase = outro > 0 ? 'handoff' : distance > leadDistance ? 'film' : 'poster';
   }
@@ -713,10 +603,10 @@
     if (['ArrowUp', 'PageUp'].includes(event.key)) continueMotion(-1);
   });
   addEventListener('scroll', scheduleRender, { passive: true });
-  addEventListener('resize', () => { occlusionMetrics = null; updateScrollLayout(); fitFilmOffer(); buildSignTimeline(); scheduleRender(); }, { passive: true });
+  addEventListener('resize', () => { occlusionMetrics = null; updateScrollLayout(); scheduleRender(); }, { passive: true });
   film.addEventListener('loadeddata', scheduleRender);
   film.addEventListener('seeked', scheduleRender);
-  siteFrame.addEventListener('load', () => { attachReverseScroll(); buildSignTimeline(); scheduleRender(); });
+  siteFrame.addEventListener('load', () => { attachReverseScroll(); scheduleRender(); });
   loaderRetry.addEventListener('click', preloadEverything);
   preloadEverything();
 })();
