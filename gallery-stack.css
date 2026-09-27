@@ -1,0 +1,10 @@
+/* Leave room above the active album for a visible sliver of every cover. */
+.work-scroll.is-enhanced .work-grid {
+  padding: 72px 8px 28px;
+}
+
+@media (max-width: 620px) {
+  .work-scroll.is-enhanced .work-grid {
+    padding: 68px 5px 20px;
+  }
+}

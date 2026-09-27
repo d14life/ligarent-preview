@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#101d25">
+  <meta name="description" content="LIGARENT — двигаем грунт в срок.">
+  <title>LIGARENT — Двигаем грунт в срок</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="start-dark.css?v=20260927-moving-sign-2">
+  <script src="vendor/gsap.min.js" defer></script>
+  <script src="start.js?v=20260927-smooth-scrub-3" defer></script>
+</head>
+<body class="is-loading">
+  <div class="asset-loader" id="asset-loader" role="status" aria-label="Загрузка видео и сайта" aria-busy="true">
+    <div class="asset-loader__brand">LIGARENT</div>
+    <div class="asset-loader__content">
+      <p class="asset-loader__status" id="loader-status">Подготавливаем видео и сайт</p>
+      <div class="asset-loader__headline" aria-hidden="true"><strong>ЗАГРУЗКА</strong><span id="loader-percent">00%</span></div>
+      <div class="asset-loader__track" id="loader-progress" role="progressbar" aria-label="Загружено" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span id="loader-fill"></span></div>
+      <div class="asset-loader__footer"><span>ВИДЕО + САЙТ</span><button id="loader-retry" type="button" hidden>Повторить загрузку</button><a id="loader-bypass" href="./site.html" hidden>Открыть сайт без видео</a></div>
+    </div>
+  </div>
+  <main class="poster" id="poster">
+    <header class="poster__header">
+      <a class="poster__brand" href="./site.html" aria-label="LIGARENT — открыть сайт">LIGARENT</a>
+      <nav class="poster__nav" aria-label="Разделы сайта">
+        <a href="./site.html#machines">Машины</a>
+        <a href="./site.html#selection">Какая машина</a>
+        <a href="./site.html#work">Что делаем</a>
+        <a href="./site.html#geography">География</a>
+        <a href="./site.html#faq">Вопросы</a>
+      </nav>
+      <a class="poster__top-cta" href="./site.html#enquiry">Оставить заявку</a>
+    </header>
+
+    <div class="poster__copy">
+      <h1 class="poster__headline" id="hero-title">
+        <span>Двигаем грунт.</span>
+        <span>В срок.</span>
+      </h1>
+      <p>Аренда бульдозеров с оператором.<br>Опишите задачу — машину назовём мы.</p>
+      <div class="poster__actions">
+        <a class="poster__primary" href="./site.html#enquiry">Оставить заявку</a>
+        <a class="poster__secondary" href="./site.html#machines">Смотреть машины</a>
+      </div>
+    </div>
+
+    <div class="poster__details" aria-label="О компании">
+      <span><strong>С ОПЕРАТОРОМ</strong><small>Аренда техники</small></span>
+      <span><strong>3 МОДЕЛИ CAT</strong><small>D6R · D7R · D8R</small></span>
+      <span><strong>ТАТАРСТАН</strong><small>Выезд на объект</small></span>
+    </div>
+    <button class="poster__scroll" id="start-film" type="button" aria-label="Начать видео и перейти на сайт">
+      <span>Прокрутите вниз</span><span aria-hidden="true">↓</span>
+    </button>
+  </main>
+  <div class="poster__runway" id="poster-runway" aria-hidden="true"></div>
+
+  <div class="film-stage" id="film-stage" role="region" aria-label="Вступительное видео">
+    <video id="film" muted playsinline preload="auto" poster="assets/ligarent-video1-seedream-v5-pro-first-2048.png"></video>
+    <div class="film-stage__offer" id="film-offer" aria-hidden="true">
+      <strong>Аренда бульдозеров с оператором.</strong>
+    </div>
+  </div>
+  <button class="film-stage__skip" id="film-skip" type="button" hidden>Перейти к сайту</button>
+
+  <!-- The actual website loads live from site.html. -->
+  <div class="site-stage" id="site-stage" aria-hidden="true" inert>
+    <iframe id="live-site" data-src="./site.html" title="LIGARENT — действующий сайт" loading="eager" tabindex="-1"></iframe>
+  </div>
+
+  <div class="film-stage__mark" id="film-mark" aria-hidden="true">
+    <img src="assets/ligarent-ground-sign.png" alt="">
+    <span class="film-stage__mark-clean">LIGARENT</span>
+  </div>
+
+  <button class="headline-editor__toggle" id="editor-toggle" type="button" aria-controls="headline-editor" aria-expanded="false" hidden>Настроить текст</button>
+  <aside class="headline-editor" id="headline-editor" aria-label="Положение заголовка" hidden>
+    <div class="headline-editor__head"><strong>Интро · положение</strong><button type="button" id="editor-close" aria-label="Закрыть настройки">×</button></div>
+    <div class="headline-editor__fields">
+      <label>X <input type="range" data-axis="x" min="-500" max="500" value="0"><output data-value="x">0</output></label>
+      <label>Y <input type="range" data-axis="y" min="-400" max="400" value="0"><output data-value="y">0</output></label>
+      <label>Z <input type="range" data-axis="z" min="-600" max="600" value="0"><output data-value="z">0</output></label>
+      <label>Rotate X <input type="range" data-axis="rx" min="-45" max="45" value="0"><output data-value="rx">0°</output></label>
+      <label>Rotate Y <input type="range" data-axis="ry" min="-45" max="45" value="0"><output data-value="ry">0°</output></label>
+      <label>Rotate Z <input type="range" data-axis="rz" min="-45" max="45" value="0"><output data-value="rz">0°</output></label>
+      <label>Scale <input type="range" data-axis="scale" min="0.7" max="2" step="0.05" value="1"><output data-value="scale">1×</output></label>
+      <label>Блок Y <input type="range" data-axis="copyY" min="-250" max="400" value="0"><output data-value="copyY">0</output></label>
+      <label>UI X <input type="range" data-axis="uiX" min="-250" max="250" value="0"><output data-value="uiX">0</output></label>
+      <label>UI Y <input type="range" data-axis="uiY" min="-250" max="250" value="0"><output data-value="uiY">0</output></label>
+      <div class="headline-editor__section">Нижние блоки</div>
+      <label>Опер. X <input type="range" data-axis="detail1X" min="-500" max="500" value="0"><output data-value="detail1X">0</output></label>
+      <label>Опер. Y <input type="range" data-axis="detail1Y" min="-400" max="400" value="0"><output data-value="detail1Y">0</output></label>
+      <label>CAT X <input type="range" data-axis="detail2X" min="-500" max="500" value="0"><output data-value="detail2X">0</output></label>
+      <label>CAT Y <input type="range" data-axis="detail2Y" min="-400" max="400" value="0"><output data-value="detail2Y">0</output></label>
+      <label>Регион X <input type="range" data-axis="detail3X" min="-500" max="500" value="0"><output data-value="detail3X">0</output></label>
+      <label>Регион Y <input type="range" data-axis="detail3Y" min="-400" max="400" value="0"><output data-value="detail3Y">0</output></label>
+    </div>
+    <button class="headline-editor__reset" id="editor-reset" type="button">Сбросить положение</button>
+    <p>Перетаскивайте заголовок и каждый нижний блок для X/Y. Блок Y двигает описание и обе кнопки; UI X/Y — остальной интерфейс. Настройки сохраняются в этом браузере.</p>
+  </aside>
+</body>
+</html>

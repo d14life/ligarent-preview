@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" role="img" aria-label="Дорога">
+  <g fill="none" stroke="#ffda23" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M17 4h14l12 40H5L17 4Z" stroke-width="2.8"/>
+    <path d="M24 7v7m0 7v7m0 7v6" stroke-width="3"/>
+    <path d="M15 12h5m8 0h5M11 26h8m10 0h8M7 40h12m10 0h12" stroke-width="2" opacity=".8"/>
+  </g>
+</svg>
