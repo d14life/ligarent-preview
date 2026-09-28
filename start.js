@@ -29,23 +29,10 @@
   const videoPath = innerWidth <= 1280 || matchMedia('(pointer: coarse)').matches
     ? 'assets/ligarent-intro-first-1080p-scrub.mp4'
     : 'assets/ligarent-intro-first-1440p-scrub.mp4';
-  const sitePages = ['site.html', 'selection.html', 'work.html', 'geography.html', 'faq.html', 'enquiry.html'];
-  // Every first-party image used by the current site, including its later sections.
-  const siteMedia = [
-    'album-d6r-earth.jpg', 'album-d6r-truck.jpg', 'album-d7r-road.jpg', 'album-d7r-site.jpg',
-    'bulldozer-front-transparent.png', 'bulldozer-front.png', 'bulldozer-mark-yellow.svg',
-    'bulldozer-mark.svg', 'bulldozer-top-landscape.png',
-    'd6r-drawing.png', 'd6r-no-rods.png', 'd7r-drawing.png', 'd7r.png',
-    'd8r-drawing.png', 'd8r.png', 'intro-first-frame.jpg', 'ligarent-video1-seedream-v5-pro-first-2048.png',
-    'road-mark.svg', 'work-0.jpg', 'work-1.jpg', 'work-10.jpg',
-    'work-11.jpg', 'work-15.jpg', 'work-2.jpg', 'work-3.jpg', 'work-4.jpg', 'work-5.jpg',
-    'work-6.jpg', 'work-7.jpg', 'work-8.jpg', 'work-9.jpg'
-  ].map(name => `assets/${name}`);
   const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
   let assetsReady = false;
-  let videoObjectURL = null;
   let preloadController = null;
-  let videoProgress = reduceMotion ? 1 : 0;
+  let videoStarted = false;
   let siteProgress = 0;
   const FIRST_CLIP_END = 7.25;
   const SCROLL_PIXELS_PER_SECOND = 180;
@@ -74,68 +61,22 @@
   };
 
   function renderLoadingProgress(done = false) {
-    const percent = done ? 100 : Math.min(99, Math.floor(videoProgress * 30 + siteProgress * 70));
+    const percent = done ? 100 : Math.min(99, Math.floor(siteProgress * 100));
     loaderPercent.textContent = `${String(percent).padStart(2, '0')}%`;
     loaderProgress.setAttribute('aria-valuenow', String(percent));
     loaderFill.style.width = `${percent}%`;
   }
 
-  async function fetchComplete(url, signal) {
-    const response = await fetch(url, { signal, cache: 'force-cache' });
-    if (!response.ok) throw new Error(`Не загрузился файл: ${url}`);
-    await response.arrayBuffer();
-  }
-
-  async function preloadVideo(signal) {
-    if (reduceMotion) return;
-    const response = await fetch(videoPath, { signal, cache: 'force-cache' });
-    if (!response.ok) throw new Error('Не удалось загрузить видео.');
-    const total = Number(response.headers.get('content-length')) || 0;
-    const chunks = [];
-    let received = 0;
-    if (response.body) {
-      const reader = response.body.getReader();
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        chunks.push(value);
-        received += value.byteLength;
-        if (total) {
-          videoProgress = Math.min(.98, received / total);
-          renderLoadingProgress();
-        }
-      }
-    } else {
-      chunks.push(await response.arrayBuffer());
-    }
-    if (videoObjectURL) URL.revokeObjectURL(videoObjectURL);
-    videoObjectURL = URL.createObjectURL(new Blob(chunks, { type: 'video/mp4' }));
-    await new Promise((resolve, reject) => {
-      const timer = setTimeout(() => finish(new Error('Видео не подготовилось к воспроизведению.')), 20000);
-      const onReady = () => finish();
-      const onError = () => finish(new Error('Браузер не может воспроизвести видео.'));
-      const onAbort = () => finish(signal.reason || new Error('Загрузка отменена.'));
-      function finish(error) {
-        clearTimeout(timer);
-        film.removeEventListener('loadeddata', onReady);
-        film.removeEventListener('error', onError);
-        signal.removeEventListener('abort', onAbort);
-        if (error) reject(error); else resolve();
-      }
-      film.addEventListener('loadeddata', onReady, { once: true });
-      film.addEventListener('error', onError, { once: true });
-      signal.addEventListener('abort', onAbort, { once: true });
-      film.src = videoObjectURL;
-      film.load();
-      if (film.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) finish();
-    });
-    videoProgress = 1;
-    renderLoadingProgress();
+  function loadVideoInBackground() {
+    if (reduceMotion || videoStarted) return;
+    videoStarted = true;
+    film.src = videoPath;
+    film.load();
   }
 
   function waitForSiteFrame(signal) {
     return new Promise((resolve, reject) => {
-      const timer = setTimeout(() => finish(new Error('Сайт загружается слишком долго.')), 90000);
+      const timer = setTimeout(() => finish(new Error('Сайт загружается слишком долго.')), 20000);
       const onLoad = () => {
         try {
           if (siteFrame.contentWindow?.location.href === 'about:blank') return;
@@ -155,55 +96,10 @@
     });
   }
 
-  async function fetchPool(urls, signal, onItem) {
-    let next = 0;
-    let complete = 0;
-    const workers = Array.from({ length: Math.min(6, urls.length) }, async () => {
-      while (next < urls.length) {
-        const url = urls[next++];
-        await fetchComplete(url, signal);
-        onItem(++complete, urls.length);
-      }
-    });
-    await Promise.all(workers);
-  }
-
   async function preloadSite(signal) {
-    const frameReady = waitForSiteFrame(signal);
-    frameReady.catch(() => {});
-    const pages = await Promise.all(sitePages.map(async page => {
-      const response = await fetch(page, { signal, cache: 'force-cache' });
-      if (!response.ok) throw new Error(`Не загрузилась страница: ${page}`);
-      return new DOMParser().parseFromString(await response.text(), 'text/html');
-    }));
-    const shell = pages.flatMap(page => [...page.querySelectorAll('script[src], link[rel="stylesheet"][href]')]
-      .map(node => node.getAttribute('src') || node.getAttribute('href')));
-    const urls = [...new Set([...shell, ...siteMedia])];
-    siteProgress = .03;
+    siteProgress = .08;
     renderLoadingProgress();
-    await fetchPool(urls, signal, (complete, total) => {
-      siteProgress = .03 + .85 * complete / total;
-      renderLoadingProgress();
-    });
-    await frameReady;
-    siteProgress = .9;
-    renderLoadingProgress();
-    let siteDocument = null;
-    try { siteDocument = siteFrame.contentDocument; } catch (_) {}
-    if (siteDocument) {
-      const extra = [...siteDocument.querySelectorAll('img[src], source[src], video[poster]')]
-        .map(node => node.getAttribute('src') || node.getAttribute('poster'))
-        .filter(Boolean)
-        .map(path => new URL(path, siteFrame.src))
-        .filter(url => url.origin === location.origin && !urls.some(item => new URL(item, location.href).pathname === url.pathname))
-        .map(url => url.href);
-      await fetchPool([...new Set(extra)], signal, (complete, total) => {
-        siteProgress = .9 + .08 * complete / total;
-        renderLoadingProgress();
-      });
-      await siteDocument.fonts?.ready;
-    }
-    await document.fonts.ready;
+    await waitForSiteFrame(signal);
     siteProgress = 1;
     renderLoadingProgress();
   }
@@ -212,37 +108,34 @@
     preloadController?.abort();
     const controller = new AbortController();
     preloadController = controller;
-    const started = performance.now();
-    videoProgress = reduceMotion ? 1 : 0;
     siteProgress = 0;
     loader.dataset.state = 'loading';
     loader.setAttribute('aria-busy', 'true');
-    loaderStatus.textContent = 'Подготавливаем видео и сайт';
+    loaderStatus.textContent = 'Подготавливаем сайт';
     loaderRetry.hidden = true;
     loaderBypass.hidden = true;
     renderLoadingProgress();
     try {
-      await Promise.all([preloadVideo(controller.signal), preloadSite(controller.signal)]);
+      await preloadSite(controller.signal);
       assetsReady = true;
+      loadVideoInBackground();
       renderLoadingProgress(true);
       loaderStatus.textContent = 'Всё готово';
       loader.dataset.state = 'ready';
       loader.setAttribute('aria-busy', 'false');
-      const remaining = Math.max(0, 450 - (performance.now() - started));
-      if (remaining) await new Promise(resolve => setTimeout(resolve, remaining));
       updateScrollLayout();
       renderScroll();
       loader.classList.add('is-done');
       setTimeout(() => {
         loader.hidden = true;
         document.body.classList.remove('is-loading');
-      }, reduceMotion ? 0 : 330);
+      }, reduceMotion ? 0 : 180);
     } catch (error) {
       controller.abort();
       if (preloadController !== controller) return;
       loader.dataset.state = 'error';
       loader.setAttribute('aria-busy', 'false');
-      loaderStatus.textContent = error?.message || 'Не удалось загрузить видео или сайт.';
+      loaderStatus.textContent = error?.message || 'Не удалось загрузить сайт.';
       loaderRetry.hidden = false;
       loaderBypass.hidden = false;
     }
@@ -341,7 +234,7 @@
 
   function updateScrollLayout() {
     leadDistance = Math.max(380, innerHeight * .58);
-    videoDistance = reduceMotion ? 0 : Math.min(FIRST_CLIP_END, Math.max(0, film.duration - 1 / 24)) * SCROLL_PIXELS_PER_SECOND;
+    videoDistance = reduceMotion ? 0 : FIRST_CLIP_END * SCROLL_PIXELS_PER_SECOND;
     filmDistance = videoDistance;
     handoffDistance = Math.max(300, innerHeight * .45);
     totalDistance = leadDistance + filmDistance + handoffDistance;

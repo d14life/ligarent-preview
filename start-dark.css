@@ -19,7 +19,7 @@ a:focus-visible, button:focus-visible, input:focus-visible { outline: 3px solid 
   padding: clamp(24px, 3.3vw, 64px);
   background: var(--yellow);
   color: #080808;
-  transition: opacity 320ms ease-in;
+  transition: opacity 180ms ease-in;
 }
 .asset-loader[hidden] { display: none; }
 .asset-loader.is-done { opacity: 0; pointer-events: none; }
