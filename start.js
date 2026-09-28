@@ -32,7 +32,8 @@
   const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
   let assetsReady = false;
   let preloadController = null;
-  let videoStarted = false;
+  let videoObjectURL = null;
+  let videoProgress = reduceMotion ? 1 : 0;
   let siteProgress = 0;
   const FIRST_CLIP_END = 7.25;
   const SCROLL_PIXELS_PER_SECOND = 180;
@@ -61,17 +62,57 @@
   };
 
   function renderLoadingProgress(done = false) {
-    const percent = done ? 100 : Math.min(99, Math.floor(siteProgress * 100));
+    const percent = done ? 100 : Math.min(99, Math.floor(videoProgress * 60 + siteProgress * 40));
     loaderPercent.textContent = `${String(percent).padStart(2, '0')}%`;
     loaderProgress.setAttribute('aria-valuenow', String(percent));
     loaderFill.style.width = `${percent}%`;
   }
 
-  function loadVideoInBackground() {
-    if (reduceMotion || videoStarted) return;
-    videoStarted = true;
-    film.src = videoPath;
-    film.load();
+  async function preloadVideo(signal) {
+    if (reduceMotion) return;
+    const response = await fetch(videoPath, { signal, cache: 'force-cache' });
+    if (!response.ok) throw new Error('Не удалось загрузить интро-видео.');
+    const total = Number(response.headers.get('content-length')) || 0;
+    const chunks = [];
+    let received = 0;
+    if (response.body) {
+      const reader = response.body.getReader();
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        chunks.push(value);
+        received += value.byteLength;
+        if (total) {
+          videoProgress = Math.min(.98, received / total);
+          renderLoadingProgress();
+        }
+      }
+    } else {
+      chunks.push(await response.arrayBuffer());
+    }
+    if (videoObjectURL) URL.revokeObjectURL(videoObjectURL);
+    videoObjectURL = URL.createObjectURL(new Blob(chunks, { type: 'video/mp4' }));
+    await new Promise((resolve, reject) => {
+      const timer = setTimeout(() => finish(new Error('Видео не подготовилось к воспроизведению.')), 20000);
+      const onReady = () => finish();
+      const onError = () => finish(new Error('Браузер не может воспроизвести видео.'));
+      const onAbort = () => finish(signal.reason || new Error('Загрузка отменена.'));
+      function finish(error) {
+        clearTimeout(timer);
+        film.removeEventListener('loadeddata', onReady);
+        film.removeEventListener('error', onError);
+        signal.removeEventListener('abort', onAbort);
+        if (error) reject(error); else resolve();
+      }
+      film.addEventListener('loadeddata', onReady, { once: true });
+      film.addEventListener('error', onError, { once: true });
+      signal.addEventListener('abort', onAbort, { once: true });
+      film.src = videoObjectURL;
+      film.load();
+      if (film.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) finish();
+    });
+    videoProgress = 1;
+    renderLoadingProgress();
   }
 
   function waitForSiteFrame(signal) {
@@ -101,6 +142,19 @@
     siteProgress = .08;
     renderLoadingProgress();
     await waitForSiteFrame(signal);
+    siteProgress = .25;
+    renderLoadingProgress();
+    const siteDocument = siteFrame.contentDocument;
+    const images = [...siteDocument.querySelectorAll('#machine-grid img.product, #machine-grid img.drawing')];
+    const posterImage = new Image();
+    posterImage.src = 'assets/ligarent-video1-seedream-v5-pro-first-2048.png';
+    images.push(posterImage);
+    await Promise.all(images.map(async image => {
+      if (signal.aborted) throw signal.reason || new Error('Загрузка отменена.');
+      await image.decode();
+      siteProgress += .7 / images.length;
+      renderLoadingProgress();
+    }));
     siteProgress = 1;
     renderLoadingProgress();
   }
@@ -109,17 +163,17 @@
     preloadController?.abort();
     const controller = new AbortController();
     preloadController = controller;
+    videoProgress = reduceMotion ? 1 : 0;
     siteProgress = 0;
     loader.dataset.state = 'loading';
     loader.setAttribute('aria-busy', 'true');
-    loaderStatus.textContent = 'Подготавливаем сайт';
+    loaderStatus.textContent = 'Подготавливаем первый экран';
     loaderRetry.hidden = true;
     loaderBypass.hidden = true;
     renderLoadingProgress();
     try {
-      await preloadSite(controller.signal);
+      await Promise.all([preloadVideo(controller.signal), preloadSite(controller.signal)]);
       assetsReady = true;
-      loadVideoInBackground();
       renderLoadingProgress(true);
       loaderStatus.textContent = 'Всё готово';
       loader.dataset.state = 'ready';
@@ -136,7 +190,7 @@
       if (preloadController !== controller) return;
       loader.dataset.state = 'error';
       loader.setAttribute('aria-busy', 'false');
-      loaderStatus.textContent = error?.message || 'Не удалось загрузить сайт.';
+      loaderStatus.textContent = error?.message || 'Не удалось подготовить первый экран.';
       loaderRetry.hidden = false;
       loaderBypass.hidden = false;
     }
