@@ -3,32 +3,19 @@
     {id:'machines',label:'Машины',teaser:'CAT D6R · D7R · D8R',image:'assets/d6r-no-rods.png'},
     {id:'selection',label:'Подбор',teaser:'ПОДОБРАТЬ ПОД ЗАДАЧУ',image:'assets/d7r.png'},
     {id:'work',label:'Виды работ',teaser:'ЗЕМЛЯ · ДОРОГИ · СНЕГ',image:'assets/work-0.jpg'},
-    {id:'geography',label:'Зоны выезда',teaser:'КАЛЕЙКИНО · ТАТАРСТАН',image:'assets/map-kaleykino.webp'},
+    {id:'geography',label:'Зоны выезда',teaser:'ТАТАРСТАН · БАШКОРТОСТАН',image:''},
     {id:'faq',label:'Вопросы',teaser:'ОТВЕТЫ ДО ЗАКАЗА',image:'assets/bulldozer-front.png'},
     {id:'enquiry',label:'Заявка',teaser:'РАССКАЖИТЕ ПРО ОБЪЕКТ',image:'assets/d8r.png'}
   ];
   const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const header = document.createElement('header');
   header.className = 'site-header';
-  header.innerHTML = `<div class="wrap site-header-inner"><a class="site-brand" href="#machines" aria-label="LIGARENT — машины"><span class="logo">LIGARENT</span></a><span class="site-current">Машины</span><span class="site-page-count">01 / 06</span><button class="site-background-toggle" type="button" aria-pressed="false" aria-label="Включить размытый фон LIGARENT"><span class="background-swatch" aria-hidden="true"></span><span class="background-label">Фон: синий</span></button><button class="site-menu-toggle" type="button" aria-controls="site-menu" aria-expanded="false" aria-label="Открыть меню"><span class="menu-toggle-lines" aria-hidden="true"><i></i><i></i></span><span>Меню</span></button></div>`;
+  header.innerHTML = `<div class="wrap site-header-inner"><a class="site-brand" href="#machines" aria-label="LIGARENT — машины"><span class="logo">LIGARENT</span></a><span class="site-current">Машины</span><span class="site-page-count">01 / 06</span><button class="site-menu-toggle" type="button" aria-controls="site-menu" aria-expanded="false" aria-label="Открыть меню"><span class="menu-toggle-lines" aria-hidden="true"><i></i><i></i></span><span>Меню</span></button></div>`;
   document.body.prepend(header);
 
-  const backgroundToggle = header.querySelector('.site-background-toggle');
-  const backgroundLabel = backgroundToggle.querySelector('.background-label');
-  function setBrandBackground(enabled){
-    document.body.classList.toggle('brand-background',enabled);
-    backgroundToggle.setAttribute('aria-pressed',String(enabled));
-    backgroundToggle.setAttribute('aria-label',enabled?'Включить синий фон':'Включить размытый фон LIGARENT');
-    backgroundLabel.textContent=enabled?'Фон: LIGARENT':'Фон: синий';
-    try{localStorage.setItem('ligarent-background',enabled?'brand':'blue')}catch{}
-  }
-  let useBrandBackground=false;
-  try{useBrandBackground=localStorage.getItem('ligarent-background')==='brand'}catch{}
-  setBrandBackground(useBrandBackground);
-  backgroundToggle.addEventListener('click',()=>setBrandBackground(!document.body.classList.contains('brand-background')));
 
   const menuShell = document.createElement('div');
-  menuShell.innerHTML = `<div class="menu-stairs" aria-hidden="true" hidden>${Array.from({length:5},()=>'<span class="menu-stair"></span>').join('')}</div><div class="full-menu" id="site-menu" role="dialog" aria-modal="true" aria-label="Разделы LIGARENT" hidden><div class="full-menu-head"><span class="logo">LIGARENT</span><button class="full-menu-close" type="button" aria-label="Закрыть меню"><span aria-hidden="true">×</span></button></div><nav class="full-menu-nav" aria-label="Все разделы">${pages.map((p,i)=>`<div class="full-menu-row"><a href="#${p.id}" class="full-menu-link" data-section="${p.id}"><span class="full-menu-index">${String(i+1).padStart(2,'0')}</span><span>${p.label}</span><span class="full-menu-arrow" aria-hidden="true">↗</span></a><div class="full-menu-hover" aria-hidden="true"><div class="full-menu-marquee">${Array.from({length:3},()=>`<span>${p.teaser}</span><img src="${p.image}" alt="" loading="lazy">`).join('')}</div></div></div>`).join('')}</nav><div class="full-menu-foot"><span>Двигаем грунт. В срок.</span><a href="#enquiry" data-section="enquiry">Оставить заявку ↗</a></div></div>`;
+  menuShell.innerHTML = `<div class="menu-stairs" aria-hidden="true" hidden>${Array.from({length:5},()=>'<span class="menu-stair"></span>').join('')}</div><div class="full-menu" id="site-menu" role="dialog" aria-modal="true" aria-label="Разделы LIGARENT" hidden><div class="full-menu-head"><span class="logo">LIGARENT</span><button class="full-menu-close" type="button" aria-label="Закрыть меню"><span aria-hidden="true">×</span></button></div><nav class="full-menu-nav" aria-label="Все разделы">${pages.map((p,i)=>`<div class="full-menu-row"><a href="#${p.id}" class="full-menu-link" data-section="${p.id}"><span class="full-menu-index">${String(i+1).padStart(2,'0')}</span><span>${p.label}</span><span class="full-menu-arrow" aria-hidden="true">↗</span></a><div class="full-menu-hover" aria-hidden="true"><div class="full-menu-marquee">${Array.from({length:3},()=>`<span>${p.teaser}</span>${p.image?`<img src="${p.image}" alt="" loading="lazy">`:""}`).join('')}</div></div></div>`).join('')}</nav><div class="full-menu-foot"><span>Двигаем грунт. В срок.</span><a href="#enquiry" data-section="enquiry">Оставить заявку ↗</a></div></div>`;
   document.body.appendChild(menuShell);
   const menu = menuShell.querySelector('#site-menu');
   const stairs = menuShell.querySelector('.menu-stairs');
@@ -156,9 +143,9 @@
     '#machines .machine',
     '#selection h2','#selection .fields > div','#selection .selector-action','#selection .selector-art',
     '#work .work-heading','#work .work-disclosure',
-    '#geography .coverage-copy h2','#geography .zones','#geography #zone-info','#geography .map',
+    '#geography .coverage-copy h2','#geography .map-shell',
     '#faq h2','#faq details','#faq .art-side',
-    '#enquiry h2','#enquiry .field','#enquiry .form-footer','#enquiry .contact-art'
+    '#enquiry h2','#enquiry .field','#enquiry .form-footer'
   ];
   if (!reduceMotion && 'IntersectionObserver' in window) {
     const revealItems = [...document.querySelectorAll(revealSelectors.join(','))];

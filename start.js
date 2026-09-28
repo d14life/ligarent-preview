@@ -34,10 +34,10 @@
   const siteMedia = [
     'album-d6r-earth.jpg', 'album-d6r-truck.jpg', 'album-d7r-road.jpg', 'album-d7r-site.jpg',
     'bulldozer-front-transparent.png', 'bulldozer-front.png', 'bulldozer-mark-yellow.svg',
-    'bulldozer-mark.svg', 'bulldozer-top-landscape.png', 'bulldozer-top-portrait-transparent.png',
-    'bulldozer-top-portrait.png', 'd6r-drawing.png', 'd6r-no-rods.png', 'd7r-drawing.png', 'd7r.png',
+    'bulldozer-mark.svg', 'bulldozer-top-landscape.png',
+    'd6r-drawing.png', 'd6r-no-rods.png', 'd7r-drawing.png', 'd7r.png',
     'd8r-drawing.png', 'd8r.png', 'intro-first-frame.jpg', 'ligarent-video1-seedream-v5-pro-first-2048.png',
-    'map-kaleykino.webp', 'road-mark.svg', 'work-0.jpg', 'work-1.jpg', 'work-10.jpg',
+    'road-mark.svg', 'work-0.jpg', 'work-1.jpg', 'work-10.jpg',
     'work-11.jpg', 'work-15.jpg', 'work-2.jpg', 'work-3.jpg', 'work-4.jpg', 'work-5.jpg',
     'work-6.jpg', 'work-7.jpg', 'work-8.jpg', 'work-9.jpg'
   ].map(name => `assets/${name}`);
