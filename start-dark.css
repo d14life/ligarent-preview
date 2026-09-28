@@ -119,6 +119,7 @@ a:focus-visible, button:focus-visible, input:focus-visible { outline: 3px solid 
 .poster__top-cta:hover, .poster__primary:hover { background: #ffeb75; }
 .poster__copy {
   --copy-lower: clamp(200px, 36vh, 330px);
+  --copy-text-rise: clamp(130px, 18vh, 230px);
   position: relative;
   z-index: 4;
   width: min(57%, 1010px);
@@ -149,14 +150,14 @@ a:focus-visible, button:focus-visible, input:focus-visible { outline: 3px solid 
 .poster__headline span { display: block; white-space: nowrap; }
 .poster__headline span:last-child { margin-top: .12em; }
 .poster__copy p {
-  max-width: 470px;
+  max-width: 900px;
   margin: 0 0 22px;
   color: #e4ebef;
-  font-size: clamp(16px, 1.3vw, 22px);
-  line-height: 1.36;
+  font-size: clamp(24px, 2.6vw, 42px);
+  line-height: 1.18;
   text-wrap: pretty;
   opacity: var(--intro-ui-opacity, 1);
-  transform: translate3d(var(--ui-edit-x, 0px), var(--ui-edit-y, 0px), 0) translateX(var(--intro-ui-x, 0px)) translateY(calc(var(--copy-lower) + var(--copy-edit-y, 0px)));
+  transform: translate3d(var(--ui-edit-x, 0px), var(--ui-edit-y, 0px), 0) translateX(var(--intro-ui-x, 0px)) translateY(calc(var(--copy-lower) + var(--copy-edit-y, 0px) - var(--copy-text-rise)));
 }
 .poster__actions { display: flex; flex-wrap: wrap; gap: 12px; opacity: var(--intro-ui-opacity, 1); transform: translate3d(var(--ui-edit-x, 0px), var(--ui-edit-y, 0px), 0) translateX(var(--intro-ui-x, 0px)) translateY(calc(var(--copy-lower) + var(--copy-edit-y, 0px))); }
 .poster__actions a { display: inline-flex; align-items: center; justify-content: center; min-height: 48px; padding: 12px 20px; text-decoration: none; font-size: 15px; font-weight: 900; }
@@ -316,9 +317,9 @@ body[data-phase="handoff"] .poster.is-editing .poster__details span { cursor: de
   .poster__header { padding: 10px 18px; min-height: 64px; }
   .poster__brand { font-size: 21px; }
   .poster__top-cta { min-height: 36px; padding: 8px 10px; font-size: 11px; }
-  .poster__copy { --copy-lower: clamp(120px, 25vh, 210px); width: 100%; padding: 70px 20px 0; }
+  .poster__copy { --copy-lower: clamp(120px, 25vh, 210px); --copy-text-rise: clamp(65px, 9vh, 100px); width: 100%; padding: 70px 20px 0; }
   .poster__headline { font-size: clamp(36px, 10vw, 56px); line-height: .83; }
-  .poster__copy p { font-size: 16px; }
+  .poster__copy p { font-size: clamp(20px, 5.5vw, 26px); }
   .poster__actions a { min-height: 44px; padding: 10px 12px; font-size: 13px; }
   .poster__details { left: 20px; right: 20px; bottom: 85px; gap: 12px; }
   .poster__details span { min-width: 0; flex: 1; }
