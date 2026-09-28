@@ -77,20 +77,21 @@
   function waitForSiteFrame(signal) {
     return new Promise((resolve, reject) => {
       const timer = setTimeout(() => finish(new Error('Сайт загружается слишком долго.')), 20000);
-      const onLoad = () => {
+      const poll = setInterval(() => {
         try {
-          if (siteFrame.contentWindow?.location.href === 'about:blank') return;
-        } catch (_) { /* The static asset checks below still verify this page. */ }
+          const siteDocument = siteFrame.contentDocument;
+          if (!siteDocument || siteDocument.URL === 'about:blank' || siteDocument.readyState === 'loading') return;
+          if (!siteDocument.querySelector('#machine-grid article')) return;
+        } catch (_) { return; }
         finish();
-      };
+      }, 50);
       const onAbort = () => finish(signal.reason || new Error('Загрузка отменена.'));
       function finish(error) {
         clearTimeout(timer);
-        siteFrame.removeEventListener('load', onLoad);
+        clearInterval(poll);
         signal.removeEventListener('abort', onAbort);
         if (error) reject(error); else resolve();
       }
-      siteFrame.addEventListener('load', onLoad);
       signal.addEventListener('abort', onAbort, { once: true });
       siteFrame.src = siteFrame.dataset.src;
     });
