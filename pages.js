@@ -1,6 +1,6 @@
 (() => {
   const pages = [
-    {id:'machines',label:'Машины',teaser:'CAT D6R · D7R · D8R',image:'assets/d6r.png'},
+    {id:'machines',label:'Машины',teaser:'CAT D6R · D7R · D8R',image:'assets/d6r-no-rods.png'},
     {id:'selection',label:'Подбор',teaser:'ПОДОБРАТЬ ПОД ЗАДАЧУ',image:'assets/d7r.png'},
     {id:'work',label:'Виды работ',teaser:'ЗЕМЛЯ · ДОРОГИ · СНЕГ',image:'assets/work-0.jpg'},
     {id:'geography',label:'Зоны выезда',teaser:'КАЛЕЙКИНО · ТАТАРСТАН',image:'assets/map-kaleykino.webp'},
