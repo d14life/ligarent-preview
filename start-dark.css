@@ -319,6 +319,7 @@ body.is-loading { overflow: hidden; }
 .opening-reel[hidden], .intro-returning .opening-reel { display: none; }
 .opening-reel.is-done { opacity: 0; pointer-events: none; }
 .opening-reel video { display: block; width: 100%; height: 100%; object-fit: cover; background: url('assets/ligarent-loader-first.jpg') center / cover no-repeat; }
+.opening-reel__moving-mark { position: fixed; inset: 0 auto auto 0; z-index: 101; margin: 0; pointer-events: none; transform-origin: top left; will-change: transform, opacity; }
 .opening-reel__count {
   position: absolute;
   top: clamp(18px, 3vw, 42px);
