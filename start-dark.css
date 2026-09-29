@@ -61,8 +61,6 @@ body { margin: 0; height: 100svh; overflow: hidden; background: var(--ink); colo
   font: italic 900 clamp(20px, 2vw, 31px)/1 Roboto, Arial, sans-serif;
   letter-spacing: -.07em;
   text-decoration: none;
-  opacity: var(--intro-brand-opacity, 1);
-  clip-path: inset(0 var(--intro-brand-cover, 0%) 0 0);
   transform: translate3d(var(--ui-edit-x, 0px), var(--ui-edit-y, 0px), 0);
 }
 .poster__nav { display: flex; align-items: center; gap: clamp(12px, 1.6vw, 31px); margin-left: auto; white-space: nowrap; opacity: var(--intro-ui-opacity, 1); transform: translate3d(var(--ui-edit-x, 0px), var(--ui-edit-y, 0px), 0) translateX(var(--intro-ui-x, 0px)); }
@@ -105,7 +103,6 @@ body { margin: 0; height: 100svh; overflow: hidden; background: var(--ink); colo
   letter-spacing: -.025em;
   text-shadow: 0 2px 14px #09131c60;
   transform-origin: left center;
-  opacity: var(--intro-title-opacity, 1);
   transform: perspective(1200px)
     translate3d(var(--intro-title-x, 0px), var(--intro-title-y, 0px), 0)
     translate3d(var(--headline-x), var(--headline-y), var(--headline-z))

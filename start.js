@@ -41,10 +41,8 @@
   let totalDistance = 0;
   let introPosition = 0;
   let renderPending = false;
-  let occlusionMetrics = null;
 
   const clamp = (value, min = 0, max = 1) => Math.min(max, Math.max(min, value));
-  const lerp = (start, end, progress) => start + (end - start) * progress;
   const smoothstep = (start, end, value) => {
     const t = clamp((value - start) / (end - start));
     return t * t * (3 - 2 * t);
@@ -129,7 +127,6 @@
       control.value = values[axis];
       output.value = `${values[axis]}${axis === 'scale' ? '×' : axis.startsWith('r') ? '°' : ''}`;
     }
-    occlusionMetrics = null;
   }
 
   function saveHeadline() {
@@ -215,63 +212,6 @@
     drawnFrame = -1;
   }
 
-  // Left edge of the approaching bulldozer/blade in the 1280 × 720 video.
-  // Keeping the headline on the sky side of this contour makes the machine
-  // pass in front of stationary lettering instead of moving the lettering away.
-  const contourHeights = [0, 120, 220, 300, 450, 720];
-  const bulldozerContour = [
-    [0,    900, 850, 780, 710, 460, 0],
-    [1.5,  760, 675, 650, 600, 350, -80],
-    [3,    580, 540, 510, 410, 0, -100],
-    [3.5,  510, 495, 460, 300, -60, -120],
-    [4.25, 380, 370, 345, -20, -120, -120],
-    [5,    180, -40, -100, -120, -120, -120]
-  ];
-
-  function sampleBulldozerEdge(time, height) {
-    const nextIndex = bulldozerContour.findIndex(frame => frame[0] >= time);
-    const frameIndex = nextIndex < 0 ? bulldozerContour.length - 1 : nextIndex;
-    const after = bulldozerContour[frameIndex];
-    const before = bulldozerContour[Math.max(0, frameIndex - 1)];
-    const blend = before === after ? 0 : clamp((time - before[0]) / (after[0] - before[0]));
-    let heightIndex = contourHeights.findIndex(value => value >= height);
-    if (heightIndex < 0) heightIndex = contourHeights.length - 1;
-    const upper = Math.max(0, heightIndex - 1);
-    const heightBlend = upper === heightIndex ? 0 : clamp((height - contourHeights[upper]) / (contourHeights[heightIndex] - contourHeights[upper]));
-    return lerp(lerp(before[upper + 1], before[heightIndex + 1], heightBlend),
-      lerp(after[upper + 1], after[heightIndex + 1], heightBlend), blend);
-  }
-
-  function renderHeadlineOcclusion(time, active) {
-    if (!active) {
-      headline.style.clipPath = '';
-      return;
-    }
-    if (!occlusionMetrics) {
-      const stage = filmStage.getBoundingClientRect();
-      const title = headline.getBoundingClientRect();
-      const scale = Math.max(stage.width / 1280, stage.height / 720);
-      occlusionMetrics = {
-        title,
-        scale,
-        offsetX: stage.left + (stage.width - 1280 * scale) * (innerWidth <= 600 ? .63 : .5),
-        offsetY: stage.top + (stage.height - 720 * scale) / 2
-      };
-    }
-    const { title, scale, offsetX, offsetY } = occlusionMetrics;
-    const enter = smoothstep(0, 1, time);
-    // A closely sampled silhouette avoids the long straight diagonal that used
-    // to slice through entire words as the blade passed the headline.
-    const points = Array.from({ length: 33 }, (_, index) => index / 32).map(fraction => {
-      const sourceY = (title.top + title.height * fraction - offsetY) / scale;
-      const machineX = offsetX + (sampleBulldozerEdge(time, sourceY) - 4) * scale;
-      const boundary = lerp(title.right + title.width, machineX, enter);
-      const relativeX = 100 * (boundary - title.left) / Math.max(1, title.width);
-      return `${relativeX.toFixed(2)}% ${(100 * fraction).toFixed(2)}%`;
-    });
-    headline.style.clipPath = `polygon(0 0, ${points.join(', ')}, 0 100%)`;
-  }
-
   function renderScroll() {
     if (!assetsReady) {
       const openingReel = document.getElementById('opening-reel');
@@ -288,11 +228,7 @@
     }
     const lead = clamp(distance / leadDistance);
     const frameIndex = reduceMotion ? 0 : Math.round(clamp((distance - leadDistance) / filmDistance) * (FRAME_COUNT - 1));
-    const filmTime = frameIndex / (FRAME_COUNT - 1) * FIRST_CLIP_END;
-    const first = reduceMotion ? 1 : clamp(filmTime / FIRST_CLIP_END);
     const otherUi = 1 - smoothstep(.03, .9, lead);
-    const titleOpacity = reduceMotion ? 1 - lead : 1;
-    const brandCover = reduceMotion ? 100 * lead : 100 * smoothstep(.69, .98, first);
 
     filmStage.style.opacity = String(smoothstep(0, .72, lead));
     poster.style.setProperty('--intro-still-opacity', String(1 - smoothstep(.12, .8, lead)));
@@ -300,14 +236,11 @@
     poster.style.setProperty('--intro-chrome-opacity', String(1 - smoothstep(0, .72, lead)));
     poster.style.setProperty('--intro-ui-opacity', String(otherUi));
     poster.style.setProperty('--intro-ui-x', '0px');
-    poster.style.setProperty('--intro-brand-cover', `${brandCover}%`);
-    poster.style.setProperty('--intro-title-opacity', String(titleOpacity));
     poster.style.setProperty('--intro-title-x', '0px');
     poster.style.setProperty('--intro-title-y', '0px');
     poster.style.setProperty('--intro-title-scale', '1');
 
     if (!reduceMotion) drawFrame(frameIndex);
-    renderHeadlineOcclusion(filmTime, !reduceMotion && distance >= leadDistance);
     const openingReel = document.getElementById('opening-reel');
     const posterInteractive = distance < leadDistance * .92 && (!openingReel || openingReel.hidden);
     poster.inert = !posterInteractive;
@@ -374,7 +307,7 @@
     scrollIntro(delta);
   }, { passive: false });
   for (const type of ['touchend', 'touchcancel']) addEventListener(type, () => { touchY = null; }, { passive: true });
-  addEventListener('resize', () => { occlusionMetrics = null; updateScrollLayout(); scheduleRender(); }, { passive: true });
+  addEventListener('resize', () => { updateScrollLayout(); scheduleRender(); }, { passive: true });
   document.addEventListener('intro-loader-ready', renderScroll);
   updateScrollLayout();
   if (returningFromSite) introPosition = clamp(totalDistance - reverseAmount, 0, totalDistance - 1);

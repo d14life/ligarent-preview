@@ -166,6 +166,8 @@ function bootSite({ top = 0, menu = false, dialog = false } = {}) {
   assert.doesNotMatch(html, /id="live-site"|id="poster-runway"/);
   assert.match(css, /body\s*\{[^}]*overflow:\s*hidden/);
   assert.doesNotMatch(css, /--copy-lower|--copy-text-rise/);
+  assert.doesNotMatch(css, /--intro-brand-cover|--intro-title-opacity/, 'Brand and headline must stay visible over the bulldozer');
+  assert.doesNotMatch(source, /renderHeadlineOcclusion|--intro-brand-cover|--intro-title-opacity/, 'Scrolling must not hide the persistent signs');
 
   const legacyHash = await boot({ hash: '#machines' });
   assert.equal(legacyHash.page.location.href, './site.html#machines', 'Intro deep link must reach the real site');
@@ -218,8 +220,18 @@ function bootSite({ top = 0, menu = false, dialog = false } = {}) {
   assert.equal(page.scrollY, 0, 'The intro must advance even when browser scrolling is clamped');
   assert.equal(page.location.href, 'http://test/start.html');
   assert.equal(frames.length, 0, 'Stopping input starts no self-running animation');
+  assert.equal(get('hero-title').style.clipPath, undefined, 'The headline stays whole as the bulldozer approaches');
   emit('window', 'wheel', { deltaY: -35, deltaMode: 0 });
   assert.ok(Number(get('film').dataset.frame) < forwardFrame, 'Upward scrolling immediately reverses the film');
+
+  const nearEnd = await boot();
+  nearEnd.emit('window', 'wheel', { deltaY: 210, deltaMode: 0 });
+  assert.ok(Number(nearEnd.get('film').dataset.frame) > 80, 'The final bulldozer frames render before site handoff');
+  assert.equal(nearEnd.get('hero-title').style.clipPath, undefined, 'The full headline survives the final frame');
+  assert.equal(nearEnd.get('poster').style['--intro-brand-cover'], undefined, 'The top-left brand remains uncovered');
+  assert.equal(nearEnd.page.location.href, 'http://test/start.html');
+  nearEnd.emit('window', 'wheel', { deltaY: -175, deltaMode: 0 });
+  assert.equal(nearEnd.page.document.body.dataset.phase, 'film', 'Reversing from the final frame restores earlier frames');
 
   const touch = await boot();
   touch.emit('window', 'touchstart', { touches: [{ clientY: 700 }] });
