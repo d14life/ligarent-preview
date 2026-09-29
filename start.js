@@ -23,7 +23,7 @@
   const sequenceSize = innerWidth <= 900 || matchMedia('(pointer: coarse)').matches ? 'mobile' : 'desktop';
   const FRAME_COUNT = 87;
   const FIRST_CLIP_END = 7.25;
-  const SCROLL_PIXELS_PER_SECOND = 180;
+  const SCROLL_PIXELS_PER_SECOND = 150;
   const frames = new Array(FRAME_COUNT);
   const context = film.getContext('2d', { alpha: false });
   let drawnFrame = -1;
@@ -35,9 +35,7 @@
   let handoffDistance = 0;
   let totalDistance = 0;
   let renderPending = false;
-  let siteInteractive = false;
   let occlusionMetrics = null;
-  let reverseScrollDocument = null;
 
   const clamp = (value, min = 0, max = 1) => Math.min(max, Math.max(min, value));
   const lerp = (start, end, progress) => start + (end - start) * progress;
@@ -90,7 +88,6 @@
         const siteDocument = siteFrame.contentDocument;
         if (siteDocument?.querySelector('#machine-grid article')) {
           siteReady = true;
-          attachReverseScroll();
           scheduleRender();
           clearInterval(poll);
         } else if (performance.now() - started > 20000) {
@@ -210,7 +207,7 @@
   function updateScrollLayout() {
     leadDistance = 120;
     filmDistance = reduceMotion ? 0 : FIRST_CLIP_END * SCROLL_PIXELS_PER_SECOND;
-    handoffDistance = 240;
+    handoffDistance = Math.max(100, innerHeight * .12);
     totalDistance = leadDistance + filmDistance + handoffDistance;
     // Account for mobile browser chrome: the sticky poster uses svh, while
     // the current viewport may be taller. The final handoff must stay reachable.
@@ -278,15 +275,6 @@
     headline.style.clipPath = `polygon(0 0, ${points.join(', ')}, 0 100%)`;
   }
 
-  function setSiteInteractive(active) {
-    if (siteInteractive === active) return;
-    siteInteractive = active;
-    siteStage.classList.toggle('is-active', active);
-    siteStage.inert = !active;
-    siteStage.setAttribute('aria-hidden', String(!active));
-    siteFrame.tabIndex = active ? 0 : -1;
-  }
-
   function renderScroll() {
     if (!assetsReady) return;
     const distance = clamp(scrollY, 0, totalDistance);
@@ -315,13 +303,14 @@
 
     if (!reduceMotion) drawFrame(frameIndex);
     renderHeadlineOcclusion(filmTime, !reduceMotion && distance >= leadDistance);
-    if (outro >= .995 && !siteReady) { location.href = siteFrame.dataset.src; return; }
+    // The last deliberate scroll step leaves the intro for the real website.
+    // The iframe only supplies a visual dissolve and never captures touch input.
+    if (outro >= .995) { location.replace(siteFrame.dataset.src); return; }
     siteStage.style.opacity = String(siteReady ? smoothstep(0, .8, outro) : 0);
-    setSiteInteractive(outro >= .995);
     const posterInteractive = distance < leadDistance * .92;
     poster.inert = !posterInteractive;
     poster.setAttribute('aria-hidden', String(!posterInteractive));
-    skipButton.hidden = distance < leadDistance * .9 || siteInteractive;
+    skipButton.hidden = distance < leadDistance * .9;
     document.body.dataset.phase = outro > 0 ? 'handoff' : distance > leadDistance ? 'film' : 'poster';
   }
 
@@ -335,70 +324,9 @@
   }
 
   function openSite(hash = '') {
-    // Explicit buttons go straight to their destination. There is no animation
-    // clock for scroll events to accidentally start, resume, or reverse.
-    if (!assetsReady || !siteReady) { location.href = `${siteFrame.dataset.src}${hash}`; return; }
-    if (hash) {
-      try {
-        const site = siteFrame.contentWindow;
-        const section = site.document.getElementById(hash.slice(1));
-        if (!section) throw new Error('Missing destination');
-        // scrollIntoView inside an iframe may also scroll its outer document,
-        // rewinding the intro. Position only the iframe's own scroll container.
-        const margin = parseFloat(site.getComputedStyle(section).scrollMarginTop) || 0;
-        site.history.pushState(null, '', hash);
-        site.scrollTo({ top: site.scrollY + section.getBoundingClientRect().top - margin, behavior: 'instant' });
-      } catch (_) { location.href = `${siteFrame.dataset.src}${hash}`; return; }
-    }
-    scrollTo({ top: totalDistance, behavior: 'instant' });
-    renderScroll();
-    siteFrame.focus({ preventScroll: true });
+    location.href = `${siteFrame.dataset.src}${hash}`;
   }
 
-  function attachReverseScroll() {
-    let frameWindow;
-    try { frameWindow = siteFrame.contentWindow; } catch (_) { return; }
-    if (!frameWindow) return;
-    let frameDocument;
-    try { frameDocument = frameWindow.document; } catch (_) { return; }
-    if (reverseScrollDocument === frameDocument) return;
-    reverseScrollDocument = frameDocument;
-    frameWindow.addEventListener('wheel', event => {
-      if (!siteInteractive || event.ctrlKey || event.deltaY >= 0) return;
-      const frameScroll = frameWindow.document.scrollingElement?.scrollTop || 0;
-      if (frameScroll > 1) return;
-      event.preventDefault();
-      const unit = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? innerHeight : 1;
-      scrollIntro(event.deltaY * unit);
-    }, { passive: false });
-    let touchY = null;
-    let reversingIntro = false;
-    frameWindow.addEventListener('touchstart', event => {
-      touchY = event.touches.length === 1 ? event.touches[0].clientY : null;
-      reversingIntro = false;
-    }, { passive: true });
-    frameWindow.addEventListener('touchmove', event => {
-      if ((!siteInteractive && !reversingIntro) || touchY === null || event.touches.length !== 1) return;
-      const y = event.touches[0]?.clientY;
-      if (y === undefined) return;
-      const delta = y - touchY;
-      touchY = y;
-      if (!reversingIntro && (delta <= 0 || (frameWindow.document.scrollingElement?.scrollTop || 0) > 1)) return;
-      event.preventDefault();
-      reversingIntro = true;
-      scrollIntro(-delta);
-    }, { passive: false });
-  }
-
-  poster.addEventListener('click', event => {
-    const link = event.target.closest('a[href]');
-    if (!link || !poster.contains(link)) return;
-    const destination = new URL(link.href);
-    if (destination.origin !== location.origin || destination.pathname !== new URL(siteFrame.dataset.src, location.href).pathname) return;
-    if (!assetsReady) return; // Native links remain usable during loading/errors.
-    event.preventDefault();
-    openSite(destination.hash);
-  });
   trigger.addEventListener('click', () => {
     if (sequenceFailed) { location.href = siteFrame.dataset.src; return; }
     if (!assetsReady) return;
@@ -412,7 +340,7 @@
   }
 
   addEventListener('wheel', event => {
-    if (siteInteractive || event.ctrlKey || editor.contains(event.target)) return;
+    if (event.ctrlKey || editor.contains(event.target)) return;
     if (!assetsReady && !sequenceFailed) { event.preventDefault(); return; }
     if (sequenceFailed) return;
     event.preventDefault();
@@ -420,7 +348,7 @@
     scrollIntro(event.deltaY * unit);
   }, { passive: false });
   addEventListener('keydown', event => {
-    if (siteInteractive || editor.contains(event.target) || event.target.closest('input, textarea, select, button, a, [contenteditable]')) return;
+    if (editor.contains(event.target) || event.target.closest('input, textarea, select, button, a, [contenteditable]')) return;
     const delta = { ArrowDown: 40, ArrowUp: -40, PageDown: innerHeight * .8, PageUp: -innerHeight * .8, ' ': innerHeight * (event.shiftKey ? -.8 : .8), Home: -totalDistance, End: totalDistance }[event.key];
     if (delta === undefined || sequenceFailed) return;
     event.preventDefault();
@@ -434,7 +362,7 @@
     touchY = event.touches.length === 1 ? event.touches[0].clientY : null;
   }, { passive: true });
   addEventListener('touchmove', event => {
-    if (siteInteractive || touchY === null || event.touches.length !== 1 || editor.contains(event.target)) return;
+    if (touchY === null || event.touches.length !== 1 || editor.contains(event.target)) return;
     if (!assetsReady && !sequenceFailed) { event.preventDefault(); return; }
     if (sequenceFailed) return;
     const y = event.touches[0].clientY;
@@ -446,7 +374,7 @@
   for (const type of ['touchend', 'touchcancel']) addEventListener(type, () => { touchY = null; }, { passive: true });
   addEventListener('scroll', scheduleRender, { passive: true });
   addEventListener('resize', () => { occlusionMetrics = null; updateScrollLayout(); scheduleRender(); }, { passive: true });
-  siteFrame.addEventListener('load', () => { attachReverseScroll(); scheduleRender(); });
+  siteFrame.addEventListener('load', scheduleRender);
   updateScrollLayout();
   trigger.disabled = true;
   prepareSite();
