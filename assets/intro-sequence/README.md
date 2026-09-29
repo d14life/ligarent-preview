@@ -7,4 +7,4 @@ Extracted locally from the existing `assets/ligarent-intro-first-1080p-scrub.mp4
 - Desktop: 960 × 540, 3,483,802-byte bundle.
 - Mobile: 640 × 360, 2,003,342-byte bundle.
 - The original extracted frames remain in the local source checkout for regeneration; the public preview only needs the two bundles and opening frame.
-- The intro decodes its bundle independently of the embedded website. The opening image and site links are usable immediately; a delayed iframe cannot hold a progress percentage or block the intro.
+- The intro decodes its bundle without loading the website in an iframe. The opening image and site links are usable immediately. Wheel, touch, and keyboard input update a logical intro position independent of browser page-scroll limits; the last frame opens `site.html` as the top-level page. The public `index.html` redirects into the intro and must never be used as an exit target.

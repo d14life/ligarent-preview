@@ -1,12 +1,15 @@
 (() => {
   const poster = document.getElementById('poster');
   const trigger = document.getElementById('start-film');
-  const runway = document.getElementById('poster-runway');
   const filmStage = document.getElementById('film-stage');
   const film = document.getElementById('film');
   const skipButton = document.getElementById('film-skip');
-  const siteStage = document.getElementById('site-stage');
-  const siteFrame = document.getElementById('live-site');
+  const siteUrl = './site.html';
+  // Old intro deep links belong to the live website, not the film.
+  if (/^#(machines|selection|work|geography|faq|enquiry)$/.test(location.hash)) {
+    location.replace(`${siteUrl}${location.hash}`);
+    return;
+  }
   const headline = document.getElementById('hero-title');
   const details = [...poster.querySelectorAll('.poster__details > span')];
   const editor = document.getElementById('headline-editor');
@@ -17,6 +20,7 @@
   const detailAxes = details.flatMap((_, index) => [`detail${index + 1}X`, `detail${index + 1}Y`]);
   const axes = ['x', 'y', 'z', 'rx', 'ry', 'rz', 'scale', 'copyY', 'uiX', 'uiY', ...detailAxes];
   const values = Object.fromEntries(axes.map(axis => [axis, axis === 'scale' ? 1 : 0]));
+  const layoutStorageKey = 'ligarent-headline-3d-v2';
   const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
   // Decode once; scrolling only draws an already prepared frame. No seeks,
   // playback clock, easing loop, or asynchronous frame swap follows input.
@@ -28,12 +32,11 @@
   const context = film.getContext('2d', { alpha: false });
   let drawnFrame = -1;
   let assetsReady = false;
-  let siteReady = false;
   let sequenceFailed = false;
   let leadDistance = 0;
   let filmDistance = 0;
-  let handoffDistance = 0;
   let totalDistance = 0;
+  let introPosition = 0;
   let renderPending = false;
   let occlusionMetrics = null;
 
@@ -80,23 +83,6 @@
     film.dataset.frame = String(index);
   }
 
-  function prepareSite() {
-    siteFrame.src = siteFrame.dataset.src;
-    const started = performance.now();
-    const poll = setInterval(() => {
-      try {
-        const siteDocument = siteFrame.contentDocument;
-        if (siteDocument?.querySelector('#machine-grid article')) {
-          siteReady = true;
-          scheduleRender();
-          clearInterval(poll);
-        } else if (performance.now() - started > 20000) {
-          clearInterval(poll);
-        }
-      } catch (_) { clearInterval(poll); }
-    }, 50);
-  }
-
   async function prepareSequence() {
     try {
       await preloadSequence();
@@ -135,16 +121,19 @@
   }
 
   function saveHeadline() {
-    try { localStorage.setItem('ligarent-headline-3d', JSON.stringify(values)); } catch (_) {}
+    try { localStorage.setItem(layoutStorageKey, JSON.stringify(values)); } catch (_) {}
   }
 
   try {
-    const saved = JSON.parse(localStorage.getItem('ligarent-headline-3d') || '{}');
+    const updatedLayout = localStorage.getItem(layoutStorageKey);
+    const saved = JSON.parse(updatedLayout || localStorage.getItem('ligarent-headline-3d') || '{}');
     for (const axis of axes) {
       const control = editor.querySelector(`input[data-axis="${axis}"]`);
       const number = Number(saved[axis]);
       if (Number.isFinite(number)) values[axis] = Math.min(Number(control.max), Math.max(Number(control.min), number));
     }
+    // Older layouts placed the copy and UI below the visible opening frame.
+    if (!updatedLayout) { values.copyY = 0; values.uiY = 0; }
   } catch (_) {}
   applyHeadline();
 
@@ -179,7 +168,7 @@
   function enablePositionDrag(element, xAxis, yAxis) {
     let drag = null;
     element.addEventListener('pointerdown', event => {
-      if (editor.hidden || scrollY > 1) return;
+      if (editor.hidden || introPosition > 1) return;
       event.preventDefault();
       element.setPointerCapture(event.pointerId);
       drag = { pointerId: event.pointerId, x: event.clientX, y: event.clientY, startX: values[xAxis], startY: values[yAxis] };
@@ -207,11 +196,7 @@
   function updateScrollLayout() {
     leadDistance = 120;
     filmDistance = reduceMotion ? 0 : FIRST_CLIP_END * SCROLL_PIXELS_PER_SECOND;
-    handoffDistance = Math.max(100, innerHeight * .12);
-    totalDistance = leadDistance + filmDistance + handoffDistance;
-    // Account for mobile browser chrome: the sticky poster uses svh, while
-    // the current viewport may be taller. The final handoff must stay reachable.
-    runway.style.height = `${totalDistance + innerHeight - poster.offsetHeight}px`;
+    totalDistance = leadDistance + filmDistance;
     const pixelRatio = Math.min(devicePixelRatio || 1, 1.5);
     film.width = Math.round(innerWidth * pixelRatio);
     film.height = Math.round(innerHeight * pixelRatio);
@@ -277,19 +262,20 @@
 
   function renderScroll() {
     if (!assetsReady) return;
-    const distance = clamp(scrollY, 0, totalDistance);
+    const distance = clamp(introPosition, 0, totalDistance);
+    if (distance >= totalDistance) {
+      location.replace(siteUrl);
+      return;
+    }
     const lead = clamp(distance / leadDistance);
     const frameIndex = reduceMotion ? 0 : Math.round(clamp((distance - leadDistance) / filmDistance) * (FRAME_COUNT - 1));
     const filmTime = frameIndex / (FRAME_COUNT - 1) * FIRST_CLIP_END;
     const first = reduceMotion ? 1 : clamp(filmTime / FIRST_CLIP_END);
-    const outro = clamp((distance - leadDistance - filmDistance) / handoffDistance);
     const otherUi = 1 - smoothstep(.03, .9, lead);
     const titleOpacity = reduceMotion ? 1 - lead : 1;
     const brandCover = reduceMotion ? 100 * lead : 100 * smoothstep(.69, .98, first);
 
-    // The first clip ends on the bulldozer tracks; dissolve directly into
-    // the live site instead of playing the later dirt/sign clips.
-    filmStage.style.opacity = String(smoothstep(0, .72, lead) * (siteReady ? 1 - smoothstep(0, .8, outro) : 1));
+    filmStage.style.opacity = String(smoothstep(0, .72, lead));
     poster.style.setProperty('--intro-still-opacity', String(1 - smoothstep(.12, .8, lead)));
     poster.style.setProperty('--intro-gradient-opacity', String(1 - smoothstep(.08, .95, lead)));
     poster.style.setProperty('--intro-chrome-opacity', String(1 - smoothstep(0, .72, lead)));
@@ -303,15 +289,11 @@
 
     if (!reduceMotion) drawFrame(frameIndex);
     renderHeadlineOcclusion(filmTime, !reduceMotion && distance >= leadDistance);
-    // The last deliberate scroll step leaves the intro for the real website.
-    // The iframe only supplies a visual dissolve and never captures touch input.
-    if (outro >= .995) { location.replace(siteFrame.dataset.src); return; }
-    siteStage.style.opacity = String(siteReady ? smoothstep(0, .8, outro) : 0);
     const posterInteractive = distance < leadDistance * .92;
     poster.inert = !posterInteractive;
     poster.setAttribute('aria-hidden', String(!posterInteractive));
     skipButton.hidden = distance < leadDistance * .9;
-    document.body.dataset.phase = outro > 0 ? 'handoff' : distance > leadDistance ? 'film' : 'poster';
+    document.body.dataset.phase = distance > leadDistance ? 'film' : 'poster';
   }
 
   function scheduleRender() {
@@ -324,18 +306,18 @@
   }
 
   function openSite(hash = '') {
-    location.href = `${siteFrame.dataset.src}${hash}`;
+    location.href = `${siteUrl}${hash}`;
   }
 
   trigger.addEventListener('click', () => {
-    if (sequenceFailed) { location.href = siteFrame.dataset.src; return; }
+    if (sequenceFailed) { location.href = siteUrl; return; }
     if (!assetsReady) return;
-    scrollTo({ top: leadDistance, behavior: 'instant' });
+    introPosition = leadDistance;
     renderScroll();
   });
   skipButton.addEventListener('click', () => openSite());
   function scrollIntro(delta) {
-    scrollTo({ top: clamp(scrollY + delta, 0, totalDistance), behavior: 'instant' });
+    introPosition = clamp(introPosition + delta, 0, totalDistance);
     renderScroll();
   }
 
@@ -356,7 +338,7 @@
     scrollIntro(delta);
   });
   // Direct touch deltas avoid native fling/inertia continuing the intro after
-  // the finger is lifted. The embedded live website keeps normal scrolling.
+  // the finger is lifted. The website opens as its own page at the end.
   let touchY = null;
   addEventListener('touchstart', event => {
     touchY = event.touches.length === 1 ? event.touches[0].clientY : null;
@@ -372,11 +354,8 @@
     scrollIntro(delta);
   }, { passive: false });
   for (const type of ['touchend', 'touchcancel']) addEventListener(type, () => { touchY = null; }, { passive: true });
-  addEventListener('scroll', scheduleRender, { passive: true });
   addEventListener('resize', () => { occlusionMetrics = null; updateScrollLayout(); scheduleRender(); }, { passive: true });
-  siteFrame.addEventListener('load', scheduleRender);
   updateScrollLayout();
   trigger.disabled = true;
-  prepareSite();
   prepareSequence();
 })();

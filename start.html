@@ -9,21 +9,28 @@
   <link rel="preload" as="image" href="assets/intro-sequence/desktop/frame-000.webp" fetchpriority="high">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="start-dark.css?v=20260929-direct-site-15">
-  <script src="start.js?v=20260929-direct-site-15" defer></script>
+  <link rel="stylesheet" href="start-dark.css?v=20260929-direct-site-17">
+  <script src="loader-reel.js?v=20260929-loader-reel-17" defer></script>
+  <script src="start.js?v=20260929-direct-site-17" defer></script>
 </head>
-<body>
-  <main class="poster" id="poster">
+<body class="is-loading">
+  <div class="opening-reel" id="opening-reel" role="status" aria-label="Подготовка сайта" aria-busy="true">
+    <video id="opening-video" src="assets/ligarent-loader-clips-234-1080p.mp4" poster="assets/ligarent-loader-first.jpg" autoplay muted playsinline preload="auto" aria-hidden="true"></video>
+    <button class="opening-reel__skip" id="opening-skip" type="button">Ускорить ×10</button>
+    <span class="opening-reel__count" id="opening-count" aria-live="off">02 / 04</span>
+    <span class="opening-reel__progress" aria-hidden="true"><span id="opening-progress"></span></span>
+  </div>
+  <main class="poster" id="poster" inert aria-hidden="true">
     <header class="poster__header">
-      <a class="poster__brand" href="./index.html" aria-label="LIGARENT — открыть сайт">LIGARENT</a>
+      <a class="poster__brand" href="./site.html" aria-label="LIGARENT — открыть сайт">LIGARENT</a>
       <nav class="poster__nav" aria-label="Разделы сайта">
-        <a href="./index.html#machines">Машины</a>
-        <a href="./index.html#selection">Какая машина</a>
-        <a href="./index.html#work">Что делаем</a>
-        <a href="./index.html#geography">География</a>
-        <a href="./index.html#faq">Вопросы</a>
+        <a href="./site.html#machines">Машины</a>
+        <a href="./site.html#selection">Какая машина</a>
+        <a href="./site.html#work">Что делаем</a>
+        <a href="./site.html#geography">География</a>
+        <a href="./site.html#faq">Вопросы</a>
       </nav>
-      <a class="poster__top-cta" href="./index.html#enquiry">Оставить заявку</a>
+      <a class="poster__top-cta" href="./site.html#enquiry">Оставить заявку</a>
     </header>
 
     <div class="poster__copy">
@@ -33,8 +40,8 @@
       </h1>
       <p>Аренда бульдозеров с оператором.<br>Опишите задачу — машину назовём мы.</p>
       <div class="poster__actions">
-        <a class="poster__primary" href="./index.html#enquiry">Оставить заявку</a>
-        <a class="poster__secondary" href="./index.html#machines">Смотреть машины</a>
+        <a class="poster__primary" href="./site.html#enquiry">Оставить заявку</a>
+        <a class="poster__secondary" href="./site.html#machines">Смотреть машины</a>
       </div>
     </div>
 
@@ -47,17 +54,10 @@
       <span>Прокрутите вниз</span><span aria-hidden="true">↓</span>
     </button>
   </main>
-  <div class="poster__runway" id="poster-runway" aria-hidden="true"></div>
-
   <div class="film-stage" id="film-stage" role="region" aria-label="Вступление, управляемое прокруткой">
     <canvas id="film" aria-hidden="true"></canvas>
   </div>
   <button class="film-stage__skip" id="film-skip" type="button" hidden>Перейти к сайту</button>
-
-  <!-- The actual website loads live; edits to index.html appear here automatically. -->
-  <div class="site-stage" id="site-stage" aria-hidden="true" inert>
-    <iframe id="live-site" data-src="./index.html" title="LIGARENT — действующий сайт" loading="eager" tabindex="-1"></iframe>
-  </div>
 
   <button class="headline-editor__toggle" id="editor-toggle" type="button" aria-controls="headline-editor" aria-expanded="false" hidden>Настроить текст</button>
   <aside class="headline-editor" id="headline-editor" aria-label="Положение заголовка" hidden>
