@@ -5,6 +5,8 @@
   const film = document.getElementById('film');
   const skipButton = document.getElementById('film-skip');
   const siteUrl = './site.html';
+  const reverseAmount = Number(new URLSearchParams(location.search).get('reverse'));
+  const returningFromSite = Number.isFinite(reverseAmount) && reverseAmount > 0;
   // Old intro deep links belong to the live website, not the film.
   if (/^#(machines|selection|work|geography|faq|enquiry)$/.test(location.hash)) {
     location.replace(`${siteUrl}${location.hash}`);
@@ -84,18 +86,27 @@
   }
 
   async function prepareSequence() {
+    let timeoutId;
     try {
-      await preloadSequence();
+      await Promise.race([
+        preloadSequence(),
+        new Promise((_, reject) => { timeoutId = setTimeout(() => reject(new Error('Intro frames timed out')), 12000); })
+      ]);
       assetsReady = true;
       trigger.disabled = false;
       updateScrollLayout();
       renderScroll();
+      document.documentElement.classList.remove('intro-returning');
     } catch (error) {
       sequenceFailed = true;
       trigger.disabled = false;
+      document.documentElement.classList.remove('intro-returning');
       console.error('Intro frames could not be prepared:', error);
       trigger.querySelector('span').textContent = 'Открыть сайт';
       trigger.setAttribute('aria-label', 'Открыть сайт напрямую');
+      renderScroll();
+    } finally {
+      clearTimeout(timeoutId);
     }
   }
 
@@ -261,7 +272,14 @@
   }
 
   function renderScroll() {
-    if (!assetsReady) return;
+    if (!assetsReady) {
+      const openingReel = document.getElementById('opening-reel');
+      if (!openingReel || openingReel.hidden) {
+        poster.inert = false;
+        poster.setAttribute('aria-hidden', 'false');
+      }
+      return;
+    }
     const distance = clamp(introPosition, 0, totalDistance);
     if (distance >= totalDistance) {
       location.replace(siteUrl);
@@ -289,7 +307,8 @@
 
     if (!reduceMotion) drawFrame(frameIndex);
     renderHeadlineOcclusion(filmTime, !reduceMotion && distance >= leadDistance);
-    const posterInteractive = distance < leadDistance * .92;
+    const openingReel = document.getElementById('opening-reel');
+    const posterInteractive = distance < leadDistance * .92 && (!openingReel || openingReel.hidden);
     poster.inert = !posterInteractive;
     poster.setAttribute('aria-hidden', String(!posterInteractive));
     skipButton.hidden = distance < leadDistance * .9;
@@ -355,7 +374,9 @@
   }, { passive: false });
   for (const type of ['touchend', 'touchcancel']) addEventListener(type, () => { touchY = null; }, { passive: true });
   addEventListener('resize', () => { occlusionMetrics = null; updateScrollLayout(); scheduleRender(); }, { passive: true });
+  document.addEventListener('intro-loader-ready', renderScroll);
   updateScrollLayout();
+  if (returningFromSite) introPosition = clamp(totalDistance - reverseAmount, 0, totalDistance - 1);
   trigger.disabled = true;
   prepareSequence();
 })();

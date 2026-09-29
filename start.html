@@ -6,16 +6,20 @@
   <meta name="theme-color" content="#101d25">
   <meta name="description" content="LIGARENT — двигаем грунт в срок.">
   <title>LIGARENT — Двигаем грунт в срок</title>
+  <script>if (new URLSearchParams(location.search).has('reverse')) document.documentElement.classList.add('intro-returning');</script>
+  <link rel="preload" as="image" href="assets/ligarent-loader-first.jpg" fetchpriority="high">
   <link rel="preload" as="image" href="assets/intro-sequence/desktop/frame-000.webp" fetchpriority="high">
+  <link rel="preload" as="image" href="assets/intro-sequence/desktop/frame-086.webp">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="start-dark.css?v=20260929-clip234-isolated">
-  <script src="loader-reel.js?v=20260929-clip234-isolated" defer></script>
-  <script src="start.js?v=20260929-direct-site-17" defer></script>
+  <link rel="stylesheet" href="start-dark.css?v=20260929-clip234-fast-20">
+  <script src="loader-reel.js?v=20260929-clip234-fast-20" defer></script>
+  <script src="start.js?v=20260929-loader-19" defer></script>
 </head>
 <body class="is-loading">
-  <div class="opening-reel" id="opening-reel" role="status" aria-label="Подготовка сайта" aria-busy="true">
-    <video id="opening-video" data-src="assets/ligarent-loader-clips-234-1080p.mp4" poster="assets/ligarent-loader-first.jpg" muted playsinline preload="auto" aria-hidden="true"></video>
+  <div class="opening-reel" id="opening-reel" role="status" aria-label="Вступительные кадры" aria-busy="true">
+    <video id="opening-video" data-src="assets/ligarent-loader-clips-234-720p.mp4" poster="assets/ligarent-loader-first.jpg" muted playsinline preload="auto" aria-hidden="true"></video>
+    <span class="opening-reel__count" id="opening-count" aria-live="off">02 / 04</span>
     <span class="opening-reel__progress" aria-hidden="true"><span id="opening-progress"></span></span>
   </div>
   <main class="poster" id="poster" inert aria-hidden="true">

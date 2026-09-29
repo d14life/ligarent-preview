@@ -404,3 +404,8 @@ button,.button{font-family:var(--font-display);font-weight:500;letter-spacing:.0
 .machine-atropos.atropos-active .drawing{opacity:1}
 
 @media(min-width:901px){.fleet{min-height:100vh}}
+
+/* Keep the live fleet directly below the header after the intro. */
+#machines.fleet{padding-top:24px}
+@media(max-width:620px){#machines.fleet{padding-top:18px}}
+html{overscroll-behavior-y:none}
