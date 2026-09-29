@@ -12,18 +12,20 @@
   <link rel="preload" as="image" href="assets/intro-sequence/mobile/frame-000.webp?v=20260929-4k-16fps-27" media="(max-width: 600px) and (orientation: portrait)" fetchpriority="high">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="start-dark.css?v=20260929-4k-16fps-27">
+  <link rel="stylesheet" href="start-dark.css?v=20260929-handoff-1">
   <script src="vendor/gsap.min.js" defer></script>
   <script src="loader-reel.js?v=20260929-4k-16fps-27" defer></script>
-  <script src="start.js?v=20260929-4k-16fps-27" defer></script>
+  <script src="site-embed.js?v=20260929-handoff-1" defer></script>
+  <script src="start.js?v=20260929-handoff-1" defer></script>
 </head>
-<body class="is-loading">
+<body class="is-loading" data-site-url="./site.html">
   <div class="opening-reel" id="opening-reel" role="status" aria-label="Вступительные кадры" aria-busy="true">
     <video id="opening-video" data-src="assets/ligarent-loader-clips-234-clean-720p.mp4" poster="assets/ligarent-loader-first.jpg" muted playsinline preload="auto" aria-hidden="true"></video>
     <span class="opening-reel__count" id="opening-count" aria-live="off">02 / 04 · 0%</span>
     <span class="opening-reel__progress" aria-hidden="true"><span id="opening-progress"></span></span>
   </div>
-  <main class="poster" id="poster" inert aria-hidden="true">
+  <div class="site-root" id="site-root" inert aria-hidden="true"></div>
+  <div class="poster" id="poster" inert aria-hidden="true">
     <header class="poster__header">
       <a class="poster__brand" href="./site.html" aria-label="LIGARENT — открыть сайт">LIGARENT</a>
       <nav class="poster__nav" aria-label="Разделы сайта">
@@ -56,7 +58,7 @@
     <button class="poster__scroll" id="start-film" type="button" aria-label="Прокрутить к началу интро">
       <span>Прокрутите вниз</span><span aria-hidden="true">↓</span>
     </button>
-  </main>
+  </div>
   <div class="film-stage" id="film-stage" role="region" aria-label="Вступление, управляемое прокруткой">
     <canvas id="film" aria-hidden="true"></canvas>
   </div>

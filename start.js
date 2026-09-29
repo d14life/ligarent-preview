@@ -4,7 +4,8 @@
   const filmStage = document.getElementById('film-stage');
   const film = document.getElementById('film');
   const skipButton = document.getElementById('film-skip');
-  const siteUrl = './site.html';
+  const siteRoot = document.getElementById('site-root');
+  const siteUrl = document.body.dataset.siteUrl || './site.html';
   const reverseAmount = Number(new URLSearchParams(location.search).get('reverse'));
   const returningFromSite = Number.isFinite(reverseAmount) && reverseAmount > 0;
   // Old intro deep links belong to the live website, not the film.
@@ -38,8 +39,11 @@
   let sequenceFailed = false;
   let leadDistance = 0;
   let filmDistance = 0;
+  let filmEnd = 0;
   let totalDistance = 0;
   let introPosition = 0;
+  let sitePrepared = window.ligarentSiteStatus === 'ready';
+  let siteActive = false;
   let renderPending = false;
   let occlusionMetrics = null;
   let lastPosterInteractive = null;
@@ -211,9 +215,12 @@
   details.forEach((detail, index) => enablePositionDrag(detail, `detail${index + 1}X`, `detail${index + 1}Y`));
 
   function updateScrollLayout() {
+    const wasActive = siteActive;
     leadDistance = 30;
     filmDistance = reduceMotion ? 0 : FIRST_CLIP_END * SCROLL_PIXELS_PER_SECOND;
-    totalDistance = leadDistance + filmDistance;
+    filmEnd = leadDistance + filmDistance;
+    totalDistance = filmEnd + 72;
+    if (wasActive) introPosition = totalDistance;
     const pixelRatio = Math.min(devicePixelRatio || 1, 1.5);
     film.width = Math.round(innerWidth * pixelRatio);
     film.height = Math.round(innerHeight * pixelRatio);
@@ -290,10 +297,17 @@
       }
       return;
     }
+    if (!sitePrepared && introPosition > filmEnd) introPosition = filmEnd;
     const distance = clamp(introPosition, 0, totalDistance);
-    if (distance >= totalDistance) {
-      location.replace(siteUrl);
-      return;
+    const handoff = clamp((distance - filmEnd) / (totalDistance - filmEnd));
+    const active = handoff >= 1;
+    document.documentElement.style.setProperty('--handoff-cut', `${(handoff * 100).toFixed(3)}%`);
+    if (active !== siteActive) {
+      siteActive = active;
+      document.body.classList.toggle('site-active', active);
+      siteRoot.inert = !active;
+      siteRoot.setAttribute('aria-hidden', String(!active));
+      if (active) dispatchEvent(new Event('resize'));
     }
     const lead = clamp(distance / leadDistance);
     const frameIndex = reduceMotion ? 0 : Math.round(clamp((distance - leadDistance) / filmDistance) * (FRAME_COUNT - 1));
@@ -319,12 +333,12 @@
       poster.setAttribute('aria-hidden', String(!posterInteractive));
       lastPosterInteractive = posterInteractive;
     }
-    const skipVisible = distance >= leadDistance * .9;
+    const skipVisible = distance >= leadDistance * .9 && !active;
     if (skipVisible !== lastSkipVisible) {
       skipButton.hidden = !skipVisible;
       lastSkipVisible = skipVisible;
     }
-    const phase = distance > leadDistance ? 'film' : 'poster';
+    const phase = active ? 'site' : distance > filmEnd ? 'handoff' : distance > leadDistance ? 'film' : 'poster';
     if (phase !== lastPhase) {
       document.body.dataset.phase = phase;
       lastPhase = phase;
@@ -341,7 +355,10 @@
   }
 
   function openSite(hash = '') {
-    location.href = `${siteUrl}${hash}`;
+    if (!sitePrepared) { location.href = `${siteUrl}${hash}`; return; }
+    introPosition = totalDistance;
+    renderScroll();
+    if (hash) requestAnimationFrame(() => document.querySelector(hash)?.scrollIntoView({ behavior: 'instant', block: 'start' }));
   }
 
   trigger.addEventListener('click', () => {
@@ -351,13 +368,26 @@
     renderScroll();
   });
   skipButton.addEventListener('click', () => openSite());
+  poster.addEventListener('click', event => {
+    const link = event.target.closest('a[href]');
+    if (!link || !sitePrepared) return;
+    const target = new URL(link.href, location.href);
+    if (target.pathname !== new URL(siteUrl, location.href).pathname) return;
+    event.preventDefault();
+    openSite(target.hash);
+  });
   function scrollIntro(delta) {
+    if (window.ligarentSiteStatus === 'failed' && delta > 0 && introPosition + delta >= filmEnd) {
+      location.href = siteUrl;
+      return;
+    }
     introPosition = clamp(introPosition + delta, 0, totalDistance);
     scheduleRender();
   }
 
   addEventListener('wheel', event => {
     if (event.ctrlKey || editor.contains(event.target)) return;
+    if (siteActive && (event.deltaY >= 0 || scrollY > 1 || document.body.classList.contains('menu-active') || event.target.closest('input, textarea, select, [contenteditable], .full-menu'))) return;
     if (!assetsReady && !sequenceFailed) { event.preventDefault(); return; }
     if (sequenceFailed) return;
     event.preventDefault();
@@ -368,29 +398,43 @@
     if (editor.contains(event.target) || event.target.closest('input, textarea, select, button, a, [contenteditable]')) return;
     const delta = { ArrowDown: 40, ArrowUp: -40, PageDown: innerHeight * .8, PageUp: -innerHeight * .8, ' ': innerHeight * (event.shiftKey ? -.8 : .8), Home: -totalDistance, End: totalDistance }[event.key];
     if (delta === undefined || sequenceFailed) return;
+    if (siteActive && (delta >= 0 || scrollY > 1 || document.body.classList.contains('menu-active'))) return;
     event.preventDefault();
     if (!assetsReady) return;
     scrollIntro(delta);
   });
-  // Direct touch deltas avoid native fling/inertia continuing the intro after
-  // the finger is lifted. The website opens as its own page at the end.
+  // Direct touch deltas keep the intro and handoff reversible. Once revealed,
+  // native website scrolling takes over without replacing the document.
   let touchY = null;
+  let touchStartedOnIntro = false;
   addEventListener('touchstart', event => {
     touchY = event.touches.length === 1 ? event.touches[0].clientY : null;
+    touchStartedOnIntro = !siteActive;
   }, { passive: true });
   addEventListener('touchmove', event => {
     if (touchY === null || event.touches.length !== 1 || editor.contains(event.target)) return;
-    if (!assetsReady && !sequenceFailed) { event.preventDefault(); return; }
-    if (sequenceFailed) return;
     const y = event.touches[0].clientY;
     const delta = touchY - y;
     touchY = y;
+    if (siteActive) {
+      if (delta < 0 && scrollY <= 1 && !document.body.classList.contains('menu-active') && !event.target.closest('input, textarea, select, [contenteditable], .full-menu')) {
+        event.preventDefault();
+        scrollIntro(delta);
+      } else if (touchStartedOnIntro && delta > 0) {
+        event.preventDefault();
+        scrollBy(0, delta);
+      }
+      return;
+    }
+    if (!assetsReady && !sequenceFailed) { event.preventDefault(); return; }
+    if (sequenceFailed) return;
     event.preventDefault();
     scrollIntro(delta);
   }, { passive: false });
-  for (const type of ['touchend', 'touchcancel']) addEventListener(type, () => { touchY = null; }, { passive: true });
+  for (const type of ['touchend', 'touchcancel']) addEventListener(type, () => { touchY = null; touchStartedOnIntro = false; }, { passive: true });
   addEventListener('resize', () => { updateScrollLayout(); scheduleRender(); }, { passive: true });
   document.addEventListener('intro-loader-ready', renderScroll);
+  document.addEventListener('ligarent-site-ready', () => { sitePrepared = true; renderScroll(); });
   updateScrollLayout();
   if (returningFromSite) introPosition = clamp(totalDistance - reverseAmount, 0, totalDistance - 1);
   trigger.disabled = true;

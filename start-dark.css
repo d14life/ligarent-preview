@@ -4,9 +4,16 @@
 * { box-sizing: border-box; }
 html { scroll-behavior: auto; }
 body { margin: 0; height: 100svh; overflow: hidden; background: var(--ink); color: var(--white); font-family: Roboto, Arial, sans-serif; }
+body.site-active { height: auto; min-height: 100svh; overflow: auto; }
+.site-root { position: fixed; inset: 0; z-index: 0; height: 100svh; overflow: hidden; background: #101d25; }
+body.site-active .site-root { position: relative; inset: auto; height: auto; overflow: visible; }
+html.reveal-enabled .site-root #machines .reveal-item { transition: none !important; opacity: 1 !important; transform: none !important; }
+.site-root .site-header-inner { max-width: none; min-height: clamp(62px, 5.2vw, 84px); padding-left: clamp(20px, 3.3vw, 64px); padding-right: clamp(20px, 3.3vw, 64px); }
+.site-root .site-brand .logo { margin-left: 0; padding: 5px 8px 4px; border-left: 4px solid #e74548; border-right: 4px solid #e74548; font: italic 900 clamp(20px, 2vw, 31px)/1 Roboto, Arial, sans-serif; letter-spacing: -.07em; }
+.site-root .site-brand .logo::before, .site-root .site-brand .logo::after { content: none; }
 .poster {
-  position: sticky;
-  top: 0;
+  position: fixed;
+  inset: 0;
   z-index: 2;
   isolation: isolate;
   width: 100%;
@@ -14,6 +21,7 @@ body { margin: 0; height: 100svh; overflow: hidden; background: var(--ink); colo
   overflow: hidden;
   background: transparent;
 }
+.poster, .film-stage { clip-path: inset(var(--handoff-cut, 0%) 0 0 0); }
 .poster::after {
   content: "";
   position: absolute;
