@@ -17,13 +17,6 @@
   const detailAxes = details.flatMap((_, index) => [`detail${index + 1}X`, `detail${index + 1}Y`]);
   const axes = ['x', 'y', 'z', 'rx', 'ry', 'rz', 'scale', 'copyY', 'uiX', 'uiY', ...detailAxes];
   const values = Object.fromEntries(axes.map(axis => [axis, axis === 'scale' ? 1 : 0]));
-  const loader = document.getElementById('asset-loader');
-  const loaderStatus = document.getElementById('loader-status');
-  const loaderPercent = document.getElementById('loader-percent');
-  const loaderProgress = document.getElementById('loader-progress');
-  const loaderFill = document.getElementById('loader-fill');
-  const loaderRetry = document.getElementById('loader-retry');
-  const loaderBypass = document.getElementById('loader-bypass');
   const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
   // Decode once; scrolling only draws an already prepared frame. No seeks,
   // playback clock, easing loop, or asynchronous frame swap follows input.
@@ -35,9 +28,8 @@
   const context = film.getContext('2d', { alpha: false });
   let drawnFrame = -1;
   let assetsReady = false;
-  let preloadController = null;
-  let videoProgress = reduceMotion ? 1 : 0;
-  let siteProgress = 0;
+  let siteReady = false;
+  let sequenceFailed = false;
   let leadDistance = 0;
   let filmDistance = 0;
   let handoffDistance = 0;
@@ -54,33 +46,27 @@
     return t * t * (3 - 2 * t);
   };
 
-  function renderLoadingProgress(done = false) {
-    const percent = done ? 100 : Math.min(99, Math.floor(videoProgress * 60 + siteProgress * 40));
-    loaderPercent.textContent = `${String(percent).padStart(2, '0')}%`;
-    loaderProgress.setAttribute('aria-valuenow', String(percent));
-    loaderFill.style.width = `${percent}%`;
-  }
-
-  async function preloadSequence(signal) {
+  async function preloadSequence() {
     if (reduceMotion) return;
+    const response = await fetch(`assets/intro-sequence/${sequenceSize}.frames`, { cache: 'force-cache' });
+    if (!response.ok) throw new Error('Intro frames unavailable');
+    const buffer = await response.arrayBuffer();
+    const view = new DataView(buffer);
+    if (view.getUint32(0, true) !== FRAME_COUNT) throw new Error('Invalid intro frame count');
+    let offset = 4 + FRAME_COUNT * 4;
+    const slices = Array.from({ length: FRAME_COUNT }, (_, index) => {
+      const length = view.getUint32(4 + index * 4, true);
+      const start = offset;
+      offset += length;
+      return [start, offset];
+    });
+    if (offset !== buffer.byteLength) throw new Error('Invalid intro frame bundle');
     let next = 0;
-    let loaded = 0;
-    await Promise.all(Array.from({ length: 4 }, async () => {
+    await Promise.all(Array.from({ length: 6 }, async () => {
       while (next < FRAME_COUNT) {
         const index = next++;
-        if (signal.aborted) throw signal.reason;
-        if (!frames[index]) {
-          const path = `assets/intro-sequence/${sequenceSize}/frame-${String(index).padStart(3, '0')}.webp`;
-          const response = await fetch(path, { signal, cache: 'force-cache' });
-          if (!response.ok) throw new Error('Не удалось загрузить кадры интро.');
-          const blob = await response.blob();
-          const frame = await createImageBitmap(blob);
-          if (signal.aborted) { frame.close(); throw signal.reason; }
-          frames[index] = frame;
-        }
-        loaded++;
-        videoProgress = loaded / FRAME_COUNT;
-        renderLoadingProgress();
+        const [start, end] = slices[index];
+        frames[index] = await createImageBitmap(new Blob([buffer.slice(start, end)], { type: 'image/webp' }));
       }
     }));
   }
@@ -96,100 +82,37 @@
     film.dataset.frame = String(index);
   }
 
-  function waitForSiteFrame(signal) {
-    return new Promise((resolve, reject) => {
-      const timer = setTimeout(() => finish(new Error('Сайт загружается слишком долго.')), 20000);
-      const poll = setInterval(() => {
-        try {
-          const siteDocument = siteFrame.contentDocument;
-          if (!siteDocument || siteDocument.URL === 'about:blank' || siteDocument.readyState === 'loading') return;
-          if (!siteDocument.querySelector('#machine-grid article')) return;
-        } catch (_) { return; }
-        finish();
-      }, 50);
-      const onAbort = () => finish(signal.reason || new Error('Загрузка отменена.'));
-      function finish(error) {
-        clearTimeout(timer);
-        clearInterval(poll);
-        signal.removeEventListener('abort', onAbort);
-        if (error) reject(error); else resolve();
-      }
-      signal.addEventListener('abort', onAbort, { once: true });
-      siteFrame.src = siteFrame.dataset.src;
-    });
-  }
-
-  async function preloadSite(signal) {
-    siteProgress = .08;
-    renderLoadingProgress();
-    await waitForSiteFrame(signal);
-    attachReverseScroll();
-    siteProgress = .25;
-    renderLoadingProgress();
-    const siteDocument = siteFrame.contentDocument;
-    const images = [...siteDocument.querySelectorAll('#machines img')];
-    images.forEach(image => { image.loading = 'eager'; });
-    const posterImage = new Image();
-    posterImage.src = 'assets/intro-sequence/desktop/frame-000.webp';
-    images.push(posterImage);
-    await Promise.all(images.map(async image => {
-      if (signal.aborted) throw signal.reason || new Error('Загрузка отменена.');
-      await image.decode();
-      if (signal.aborted) throw signal.reason;
-      siteProgress += .7 / images.length;
-      renderLoadingProgress();
-    }));
-    siteProgress = 1;
-    renderLoadingProgress();
-  }
-
-  async function preloadEverything() {
-    preloadController?.abort();
-    const controller = new AbortController();
-    preloadController = controller;
-    videoProgress = reduceMotion ? 1 : 0;
-    siteProgress = 0;
-    loader.dataset.state = 'loading';
-    loader.setAttribute('aria-busy', 'true');
-    loaderStatus.textContent = 'Готовим прокрутку';
-    trigger.disabled = true;
-    trigger.querySelector('span').textContent = 'Готовим прокрутку…';
-    loaderRetry.hidden = true;
-    loaderBypass.hidden = false;
-    renderLoadingProgress();
-    try {
-      const timeout = setTimeout(() => controller.abort(new Error('Загрузка заняла слишком много времени. Можно открыть сайт напрямую.')), 25000);
-      let onAbort;
-      const aborted = new Promise((_, reject) => {
-        onAbort = () => reject(controller.signal.reason);
-        controller.signal.addEventListener('abort', onAbort, { once: true });
-      });
+  function prepareSite() {
+    siteFrame.src = siteFrame.dataset.src;
+    const started = performance.now();
+    const poll = setInterval(() => {
       try {
-        await Promise.race([Promise.all([preloadSequence(controller.signal), preloadSite(controller.signal)]), aborted]);
-      } finally {
-        clearTimeout(timeout);
-        controller.signal.removeEventListener('abort', onAbort);
-      }
-      if (controller.signal.aborted) throw controller.signal.reason;
+        const siteDocument = siteFrame.contentDocument;
+        if (siteDocument?.querySelector('#machine-grid article')) {
+          siteReady = true;
+          attachReverseScroll();
+          scheduleRender();
+          clearInterval(poll);
+        } else if (performance.now() - started > 20000) {
+          clearInterval(poll);
+        }
+      } catch (_) { clearInterval(poll); }
+    }, 50);
+  }
+
+  async function prepareSequence() {
+    try {
+      await preloadSequence();
       assetsReady = true;
-      renderLoadingProgress(true);
-      loaderStatus.textContent = 'Всё готово';
-      loader.dataset.state = 'ready';
-      loader.setAttribute('aria-busy', 'false');
+      trigger.disabled = false;
       updateScrollLayout();
       renderScroll();
-      loader.hidden = true;
-      document.body.classList.remove('is-loading');
-      trigger.disabled = false;
-      trigger.querySelector('span').textContent = 'Прокрутите вниз';
     } catch (error) {
-      controller.abort();
-      if (preloadController !== controller) return;
-      loader.dataset.state = 'error';
-      loader.setAttribute('aria-busy', 'false');
-      loaderStatus.textContent = error?.message || 'Не удалось подготовить первый экран.';
-      loaderRetry.hidden = false;
-      loaderBypass.hidden = false;
+      sequenceFailed = true;
+      trigger.disabled = false;
+      console.error('Intro frames could not be prepared:', error);
+      trigger.querySelector('span').textContent = 'Открыть сайт';
+      trigger.setAttribute('aria-label', 'Открыть сайт напрямую');
     }
   }
 
@@ -378,7 +301,7 @@
 
     // The first clip ends on the bulldozer tracks; dissolve directly into
     // the live site instead of playing the later dirt/sign clips.
-    filmStage.style.opacity = String(smoothstep(0, .72, lead) * (1 - smoothstep(0, .8, outro)));
+    filmStage.style.opacity = String(smoothstep(0, .72, lead) * (siteReady ? 1 - smoothstep(0, .8, outro) : 1));
     poster.style.setProperty('--intro-still-opacity', String(1 - smoothstep(.12, .8, lead)));
     poster.style.setProperty('--intro-gradient-opacity', String(1 - smoothstep(.08, .95, lead)));
     poster.style.setProperty('--intro-chrome-opacity', String(1 - smoothstep(0, .72, lead)));
@@ -392,7 +315,8 @@
 
     if (!reduceMotion) drawFrame(frameIndex);
     renderHeadlineOcclusion(filmTime, !reduceMotion && distance >= leadDistance);
-    siteStage.style.opacity = String(smoothstep(0, .8, outro));
+    if (outro >= .995 && !siteReady) { location.href = siteFrame.dataset.src; return; }
+    siteStage.style.opacity = String(siteReady ? smoothstep(0, .8, outro) : 0);
     setSiteInteractive(outro >= .995);
     const posterInteractive = distance < leadDistance * .92;
     poster.inert = !posterInteractive;
@@ -413,7 +337,7 @@
   function openSite(hash = '') {
     // Explicit buttons go straight to their destination. There is no animation
     // clock for scroll events to accidentally start, resume, or reverse.
-    if (!assetsReady) { location.href = `${siteFrame.dataset.src}${hash}`; return; }
+    if (!assetsReady || !siteReady) { location.href = `${siteFrame.dataset.src}${hash}`; return; }
     if (hash) {
       try {
         const site = siteFrame.contentWindow;
@@ -476,6 +400,7 @@
     openSite(destination.hash);
   });
   trigger.addEventListener('click', () => {
+    if (sequenceFailed) { location.href = siteFrame.dataset.src; return; }
     if (!assetsReady) return;
     scrollTo({ top: leadDistance, behavior: 'instant' });
     renderScroll();
@@ -487,16 +412,19 @@
   }
 
   addEventListener('wheel', event => {
-    if (!assetsReady || siteInteractive || event.ctrlKey || editor.contains(event.target)) return;
+    if (siteInteractive || event.ctrlKey || editor.contains(event.target)) return;
+    if (!assetsReady && !sequenceFailed) { event.preventDefault(); return; }
+    if (sequenceFailed) return;
     event.preventDefault();
     const unit = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? innerHeight : 1;
     scrollIntro(event.deltaY * unit);
   }, { passive: false });
   addEventListener('keydown', event => {
-    if (!assetsReady || siteInteractive || editor.contains(event.target) || event.target.closest('input, textarea, select, button, a, [contenteditable]')) return;
+    if (siteInteractive || editor.contains(event.target) || event.target.closest('input, textarea, select, button, a, [contenteditable]')) return;
     const delta = { ArrowDown: 40, ArrowUp: -40, PageDown: innerHeight * .8, PageUp: -innerHeight * .8, ' ': innerHeight * (event.shiftKey ? -.8 : .8), Home: -totalDistance, End: totalDistance }[event.key];
-    if (delta === undefined) return;
+    if (delta === undefined || sequenceFailed) return;
     event.preventDefault();
+    if (!assetsReady) return;
     scrollIntro(delta);
   });
   // Direct touch deltas avoid native fling/inertia continuing the intro after
@@ -506,7 +434,9 @@
     touchY = event.touches.length === 1 ? event.touches[0].clientY : null;
   }, { passive: true });
   addEventListener('touchmove', event => {
-    if (!assetsReady || siteInteractive || touchY === null || event.touches.length !== 1 || editor.contains(event.target)) return;
+    if (siteInteractive || touchY === null || event.touches.length !== 1 || editor.contains(event.target)) return;
+    if (!assetsReady && !sequenceFailed) { event.preventDefault(); return; }
+    if (sequenceFailed) return;
     const y = event.touches[0].clientY;
     const delta = touchY - y;
     touchY = y;
@@ -517,7 +447,8 @@
   addEventListener('scroll', scheduleRender, { passive: true });
   addEventListener('resize', () => { occlusionMetrics = null; updateScrollLayout(); scheduleRender(); }, { passive: true });
   siteFrame.addEventListener('load', () => { attachReverseScroll(); scheduleRender(); });
-  loaderRetry.addEventListener('click', preloadEverything);
   updateScrollLayout();
-  preloadEverything();
+  trigger.disabled = true;
+  prepareSite();
+  prepareSequence();
 })();

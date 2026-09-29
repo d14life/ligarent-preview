@@ -9,16 +9,10 @@
   <link rel="preload" as="image" href="assets/intro-sequence/desktop/frame-000.webp" fetchpriority="high">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="start-dark.css?v=20260929-frame-sequence-13">
-  <script src="start.js?v=20260929-frame-sequence-13" defer></script>
+  <link rel="stylesheet" href="start-dark.css?v=20260929-fast-intro-14">
+  <script src="start.js?v=20260929-fast-intro-14" defer></script>
 </head>
-<body class="is-loading">
-  <div class="asset-loader" id="asset-loader" role="status" aria-label="Загрузка сайта" aria-busy="true">
-    <p class="asset-loader__status" id="loader-status">Готовим прокрутку</p>
-    <span id="loader-percent">00%</span>
-    <div class="asset-loader__track" id="loader-progress" role="progressbar" aria-label="Кадры интро загружены" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span id="loader-fill"></span></div>
-    <div class="asset-loader__footer"><button id="loader-retry" type="button" hidden>Повторить</button><a id="loader-bypass" href="./index.html">Открыть сайт напрямую</a></div>
-  </div>
+<body>
   <main class="poster" id="poster">
     <header class="poster__header">
       <a class="poster__brand" href="./index.html" aria-label="LIGARENT — открыть сайт">LIGARENT</a>
@@ -49,7 +43,7 @@
       <span><strong>3 МОДЕЛИ CAT</strong><small>D6R · D7R · D8R</small></span>
       <span><strong>ТАТАРСТАН</strong><small>Выезд на объект</small></span>
     </div>
-    <button class="poster__scroll" id="start-film" type="button" aria-label="Прокрутить к началу интро" disabled>
+    <button class="poster__scroll" id="start-film" type="button" aria-label="Прокрутить к началу интро">
       <span>Прокрутите вниз</span><span aria-hidden="true">↓</span>
     </button>
   </main>
