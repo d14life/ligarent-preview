@@ -87,8 +87,8 @@ function bootLoader({ reverse = false, reduced = false } = {}) {
   const progress = new Element('opening-progress');
   const count = new Element('opening-count');
   video.currentTime = 0;
-  video.duration = 19.041667;
-  video.dataset.src = 'assets/ligarent-loader-clips-234-720p.mp4';
+  video.duration = 16.5;
+  video.dataset.src = 'assets/ligarent-loader-clips-234-clean-720p.mp4';
   video.play = () => Promise.resolve();
   video.pause = () => {};
   video.load = () => {};
@@ -156,7 +156,7 @@ function bootSite({ top = 0, menu = false, dialog = false } = {}) {
   assert.doesNotMatch(css, /\.opening-reel__skip/);
   assert.match(liveHtml, /site-return\.js/);
   assert.match(liveCss, /#machines\.fleet\{padding-top:24px\}/);
-  for (const asset of ['assets/ligarent-loader-first.jpg', 'assets/ligarent-loader-last-720p.jpg', 'assets/ligarent-loader-clips-234-720p.mp4', 'assets/intro-sequence/desktop/frame-000.webp', 'assets/intro-sequence/desktop/frame-086.webp', 'assets/d6r-no-rods.png', 'assets/d7r.png', 'assets/d8r.png']) {
+  for (const asset of ['assets/ligarent-loader-first.jpg', 'assets/ligarent-loader-clean-last-720p.jpg', 'assets/ligarent-loader-clips-234-clean-720p.mp4', 'assets/intro-sequence/desktop/frame-000.webp', 'assets/intro-sequence/desktop/frame-086.webp', 'assets/d6r-no-rods.png', 'assets/d7r.png', 'assets/d8r.png']) {
     assert.ok(existsSync(join(__dirname, introRoot, asset)), `${asset} must load on the opening or live page`);
   }
   assert.doesNotMatch(html, /id="live-site"|id="poster-runway"/);
@@ -170,15 +170,15 @@ function bootSite({ top = 0, menu = false, dialog = false } = {}) {
   assert.equal(oldLayout.get('poster').style['--ui-edit-y'], '0px', 'Old saved UI offset must not hide the opening');
   assert.equal(oldLayout.get('hero-title').style['--headline-x'], '16px', 'Unrelated saved headline position stays intact');
   const loader = bootLoader();
-  assert.equal(loader.video.src, 'assets/ligarent-loader-clips-234-720p.mp4');
+  assert.equal(loader.video.src, 'assets/ligarent-loader-clips-234-clean-720p.mp4');
   assert.equal(loader.video.playbackRate, 3);
   assert.equal(loader.emit('window', 'wheel').prevented, true, 'The reel receives no accidental frame scroll');
   loader.video.currentTime = 10;
   loader.emit(loader.video, 'timeupdate');
-  assert.match(loader.count.textContent, /^03 \/ 04 · 5[0-9]%$/, 'The visible count advances with clip 3');
+  assert.match(loader.count.textContent, /^03 \/ 04 · 6[0-9]%$/, 'The visible count advances with clip 3');
   loader.video.currentTime = 16;
   loader.emit(loader.video, 'timeupdate');
-  assert.match(loader.count.textContent, /^04 \/ 04 · 8[0-9]%$/, 'The visible count advances with clip 4');
+  assert.match(loader.count.textContent, /^04 \/ 04 · 9[0-9]%$/, 'The visible count advances with clip 4');
   loader.emit(loader.video, 'ended');
   assert.equal(loader.location.href, './site.html?from=reel', 'Finished reel enters the current website with a GSAP handoff');
   const stalledLoader = bootLoader();

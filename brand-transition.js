@@ -40,8 +40,8 @@
   };
 })();
 
-// The last generated frame already contains the machines page and its brand mark.
-// Hold that frame across navigation, then hand the mark to the real header.
+// Clip 4 ends on the isolated sign, before its obsolete rendered page appears.
+// Hold that frame across navigation, then move the sign into the live header.
 (() => {
   if (new URLSearchParams(location.search).get('from') !== 'reel') return;
   const overlay = document.createElement('div');
@@ -99,8 +99,8 @@
     const destination = target.getBoundingClientRect();
     const cloneRect = clone.getBoundingClientRect();
     const fit = Math.max(innerWidth / 1280, innerHeight / 720);
-    const sourceX = (innerWidth - 1280 * fit) / 2 + 59 * fit;
-    const sourceY = (innerHeight - 720 * fit) / 2 + 22 * fit;
+    const sourceX = (innerWidth - 1280 * fit) / 2 + 333 * fit;
+    const sourceY = (innerHeight - 720 * fit) / 2 + 122 * fit;
     const sourceVisible = sourceX >= 0 && sourceX < innerWidth;
     target.style.visibility = 'hidden';
     const { gsap } = window;
@@ -109,7 +109,8 @@
       .set(overlay, { opacity: 0 }, .17)
       .fromTo(clone,
         { x: sourceVisible ? sourceX : destination.left, y: sourceVisible ? sourceY : destination.top,
-          scale: sourceVisible ? 1.08 * fit : 1, rotation: sourceVisible ? -1 : 0, opacity: 0 },
+          scale: sourceVisible ? 304 * fit / Math.max(1, cloneRect.width) : 1,
+          rotation: sourceVisible ? -1 : 0, opacity: 0 },
         { x: destination.left, y: destination.top, scale: destination.width / Math.max(1, cloneRect.width),
           rotation: 0, opacity: 1, duration: .31, ease: 'power2.out' }, .12)
       .to(curtain, { opacity: 0, duration: .28, ease: 'power2.out' }, .22)
