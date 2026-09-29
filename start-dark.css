@@ -299,3 +299,10 @@ body[data-phase="handoff"] .poster.is-editing .poster__details span { cursor: de
 html { overscroll-behavior-y: none; }
 
 .poster__scroll:disabled { cursor: wait; }
+
+/* Hold the last still while decoded frames are restored from the site. */
+.intro-returning .poster { visibility: hidden; }
+.intro-returning .film-stage {
+  opacity: 1;
+  background-image: url('assets/intro-sequence/desktop/frame-086.webp');
+}

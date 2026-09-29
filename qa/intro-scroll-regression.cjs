@@ -6,6 +6,9 @@ const introRoot = existsSync(join(__dirname, '../dist/start.js')) ? '../dist' : 
 const source = readFileSync(join(__dirname, introRoot, 'start.js'), 'utf8');
 const html = readFileSync(join(__dirname, introRoot, 'start.html'), 'utf8');
 const css = readFileSync(join(__dirname, introRoot, 'start-dark.css'), 'utf8');
+const siteSource = readFileSync(join(__dirname, introRoot, 'site-return.js'), 'utf8');
+const liveHtml = readFileSync(join(__dirname, introRoot, introRoot === '../dist' ? 'index.html' : 'site.html'), 'utf8');
+const liveCss = readFileSync(join(__dirname, introRoot, 'style.css'), 'utf8');
 
 class Element {
   constructor(id = '') {
@@ -27,7 +30,7 @@ class Element {
   getBoundingClientRect() { return { left: 0, top: 0, right: 350, width: 390, height: 844 }; }
 }
 
-async function boot({ reduced = false, delayed = false, failed = false, hash = '', storage = {} } = {}) {
+async function boot({ reduced = false, delayed = false, failed = false, hash = '', reverse = 0, storage = {} } = {}) {
   const elements = {};
   const get = id => elements[id] ??= new Element(id);
   const controls = {};
@@ -41,7 +44,7 @@ async function boot({ reduced = false, delayed = false, failed = false, hash = '
   const events = {};
   const frames = [];
   const page = {
-    document: { getElementById: get, body: new Element() },
+    document: { getElementById: get, body: new Element(), documentElement: new Element() },
     Blob, DataView, URL, URLSearchParams, console: { error() {} },
     fetch: async () => {
       if (failed) throw new Error('download failed');
@@ -51,7 +54,7 @@ async function boot({ reduced = false, delayed = false, failed = false, hash = '
     innerWidth: 390, innerHeight: 844, devicePixelRatio: 2,
     scrollY: 0, // Deliberately fixed: Safari may clamp actual page scrolling.
     matchMedia: query => ({ matches: query.includes('reduce') && reduced }),
-    location: { href: `http://test/start.html${hash}`, hash, hostname: 'test', origin: 'http://test', replace(url) { this.href = url; this.replaced = true; } },
+    location: { href: `http://test/start.html${reverse ? `?reverse=${reverse}` : ''}${hash}`, search: reverse ? `?reverse=${reverse}` : '', hash, hostname: 'test', origin: 'http://test', replace(url) { this.href = url; this.replaced = true; } },
     localStorage: { getItem(key) { return storage[key] ?? null; }, setItem(key, value) { storage[key] = value; } },
     requestAnimationFrame(callback) { frames.push(callback); return frames.length; },
     addEventListener(type, listener) { (events[type] ??= []).push(listener); },
@@ -67,11 +70,36 @@ async function boot({ reduced = false, delayed = false, failed = false, hash = '
   return { page, get, elements, emit, frames };
 }
 
+function bootSite({ top = 0, menu = false, dialog = false } = {}) {
+  const events = {};
+  const location = { href: 'http://test/site.html', replace(url) { this.href = url; } };
+  const document = {
+    scrollingElement: { scrollTop: top },
+    body: { classList: { contains: () => menu } },
+    querySelector: () => dialog ? {} : null,
+  };
+  const page = { document, location, innerHeight: 800, scrollY: top, addEventListener(type, listener) { (events[type] ??= []).push(listener); } };
+  vm.runInNewContext(siteSource, page);
+  function emit(type, overrides = {}) {
+    const event = { target: { closest: () => null }, touches: [], preventDefault() { this.prevented = true; }, ...overrides };
+    for (const listener of events[type] ?? []) listener(event);
+    return event;
+  }
+  return { page, emit };
+}
+
 (async () => {
   assert.match(source, /const siteUrl = '\.\/site\.html'/);
   assert.match(html, /href="\.\/site\.html#machines"/);
   assert.match(html, /href="\.\/site\.html#enquiry"/);
   assert.doesNotMatch(html, /href="\.\/index\.html/);
+  assert.doesNotMatch(html, /opening-reel|Ускорить ×10|loader-reel\.js/);
+  assert.doesNotMatch(css, /\.opening-reel/);
+  assert.match(liveHtml, /site-return\.js/);
+  assert.match(liveCss, /#machines\.fleet\{padding-top:24px\}/);
+  for (const asset of ['assets/intro-sequence/desktop/frame-000.webp', 'assets/intro-sequence/desktop/frame-086.webp', 'assets/d6r-no-rods.png', 'assets/d7r.png', 'assets/d8r.png']) {
+    assert.ok(existsSync(join(__dirname, introRoot, asset)), `${asset} must load on the opening or live page`);
+  }
   assert.doesNotMatch(html, /id="live-site"|id="poster-runway"/);
   assert.match(css, /body\s*\{[^}]*overflow:\s*hidden/);
   assert.doesNotMatch(css, /--copy-lower|--copy-text-rise/);
@@ -109,6 +137,29 @@ async function boot({ reduced = false, delayed = false, failed = false, hash = '
   assert.equal(page.location.href, './site.html', 'Natural scrolling opens the real site');
   assert.equal(page.location.replaced, true);
 
+  const reverse = await boot({ reverse: 120 });
+  const reverseFirstFrame = Number(reverse.get('film').dataset.frame);
+  assert.ok(reverseFirstFrame > 70, 'Returning from the site starts near the last film frame');
+  reverse.emit('window', 'wheel', { deltaY: -450, deltaMode: 0 });
+  assert.ok(Number(reverse.get('film').dataset.frame) < reverseFirstFrame, 'Upward scrolling rewinds the frames');
+  reverse.emit('window', 'wheel', { deltaY: -9999, deltaMode: 0 });
+  assert.equal(reverse.page.document.body.dataset.phase, 'poster', 'Rewinding reaches the opening page');
+  assert.equal(reverse.page.location.href, 'http://test/start.html?reverse=120');
+
+  const siteMiddle = bootSite({ top: 200 });
+  siteMiddle.emit('wheel', { deltaY: -120 });
+  assert.equal(siteMiddle.page.location.href, 'http://test/site.html', 'Upward scrolling within the site stays in the site');
+  const siteTop = bootSite();
+  assert.equal(siteTop.emit('wheel', { deltaY: -120, deltaMode: 0 }).prevented, true);
+  assert.equal(siteTop.page.location.href, './start.html?reverse=120', 'Upward scroll at the site top reopens the frames');
+  const siteTouch = bootSite();
+  siteTouch.emit('touchstart', { touches: [{ clientY: 200 }] });
+  siteTouch.emit('touchmove', { touches: [{ clientY: 280 }] });
+  assert.equal(siteTouch.page.location.href, './start.html?reverse=80', 'Downward pull at site top reopens the frames');
+  const siteMenu = bootSite({ menu: true });
+  siteMenu.emit('wheel', { deltaY: -120 });
+  assert.equal(siteMenu.page.location.href, 'http://test/site.html', 'Open menu does not trigger an intro return');
+
   const skipped = await boot();
   skipped.emit('window', 'wheel', { deltaY: 200, deltaMode: 0 });
   skipped.emit(skipped.get('film-skip'), 'click');
@@ -123,5 +174,5 @@ async function boot({ reduced = false, delayed = false, failed = false, hash = '
   unavailable.emit(unavailable.get('start-film'), 'click');
   assert.equal(unavailable.page.location.href, './site.html');
 
-  console.log('PASS: legacy deep link, clamped browser scroll, direct site navigation, pause/reverse, touch, skip, CTA links, reduced motion, and failed frame fallback.');
+  console.log('PASS: direct site exit, reverse from site top, forward/pause/reverse frames, touch, skip, CTA links, opening layout, reduced motion, and failed frame fallback.');
 })().catch(error => { console.error(error); process.exitCode = 1; });

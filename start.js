@@ -5,6 +5,8 @@
   const film = document.getElementById('film');
   const skipButton = document.getElementById('film-skip');
   const siteUrl = './site.html';
+  const reverseAmount = Number(new URLSearchParams(location.search).get('reverse'));
+  const returningFromSite = Number.isFinite(reverseAmount) && reverseAmount > 0;
   // Old intro deep links belong to the live website, not the film.
   if (/^#(machines|selection|work|geography|faq|enquiry)$/.test(location.hash)) {
     location.replace(`${siteUrl}${location.hash}`);
@@ -90,9 +92,11 @@
       trigger.disabled = false;
       updateScrollLayout();
       renderScroll();
+      document.documentElement.classList.remove('intro-returning');
     } catch (error) {
       sequenceFailed = true;
       trigger.disabled = false;
+      document.documentElement.classList.remove('intro-returning');
       console.error('Intro frames could not be prepared:', error);
       trigger.querySelector('span').textContent = 'Открыть сайт';
       trigger.setAttribute('aria-label', 'Открыть сайт напрямую');
@@ -356,6 +360,7 @@
   for (const type of ['touchend', 'touchcancel']) addEventListener(type, () => { touchY = null; }, { passive: true });
   addEventListener('resize', () => { occlusionMetrics = null; updateScrollLayout(); scheduleRender(); }, { passive: true });
   updateScrollLayout();
+  if (returningFromSite) introPosition = clamp(totalDistance - reverseAmount, 0, totalDistance - 1);
   trigger.disabled = true;
   prepareSequence();
 })();
