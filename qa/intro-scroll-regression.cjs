@@ -85,12 +85,15 @@ function bootLoader({ reverse = false, reduced = false } = {}) {
   const reel = new Element('opening-reel');
   const video = new Element('opening-video');
   const progress = new Element('opening-progress');
+  const count = new Element('opening-count');
+  video.currentTime = 0;
+  video.duration = 19.041667;
   video.dataset.src = 'assets/ligarent-loader-clips-234-720p.mp4';
   video.play = () => Promise.resolve();
   video.pause = () => {};
   video.load = () => {};
   video.removeAttribute = () => {};
-  const elements = { 'opening-reel': reel, 'opening-video': video, 'opening-progress': progress };
+  const elements = { 'opening-reel': reel, 'opening-video': video, 'opening-progress': progress, 'opening-count': count };
   const events = {};
   const timers = new Map();
   let nextTimer = 0;
@@ -101,7 +104,7 @@ function bootLoader({ reverse = false, reduced = false } = {}) {
   };
   const page = {
     document, URLSearchParams, Event,
-    location: { search: reverse ? '?reverse=120' : '' },
+    location: { search: reverse ? '?reverse=120' : '', href: 'http://test/start.html', replace(url) { this.href = url; } },
     matchMedia: () => ({ matches: reduced }),
     setTimeout(callback) { const id = ++nextTimer; timers.set(id, callback); return id; },
     clearTimeout(id) { timers.delete(id); },
@@ -120,7 +123,7 @@ function bootLoader({ reverse = false, reduced = false } = {}) {
       callback();
     }
   }
-  return { reel, video, document, emit, flushTimers };
+  return { reel, video, count, progress, document, location: page.location, emit, flushTimers };
 }
 
 function bootSite({ top = 0, menu = false, dialog = false } = {}) {
@@ -153,7 +156,7 @@ function bootSite({ top = 0, menu = false, dialog = false } = {}) {
   assert.doesNotMatch(css, /\.opening-reel__skip/);
   assert.match(liveHtml, /site-return\.js/);
   assert.match(liveCss, /#machines\.fleet\{padding-top:24px\}/);
-  for (const asset of ['assets/ligarent-loader-first.jpg', 'assets/ligarent-loader-clips-234-720p.mp4', 'assets/intro-sequence/desktop/frame-000.webp', 'assets/intro-sequence/desktop/frame-086.webp', 'assets/d6r-no-rods.png', 'assets/d7r.png', 'assets/d8r.png']) {
+  for (const asset of ['assets/ligarent-loader-first.jpg', 'assets/ligarent-loader-last-720p.jpg', 'assets/ligarent-loader-clips-234-720p.mp4', 'assets/intro-sequence/desktop/frame-000.webp', 'assets/intro-sequence/desktop/frame-086.webp', 'assets/d6r-no-rods.png', 'assets/d7r.png', 'assets/d8r.png']) {
     assert.ok(existsSync(join(__dirname, introRoot, asset)), `${asset} must load on the opening or live page`);
   }
   assert.doesNotMatch(html, /id="live-site"|id="poster-runway"/);
@@ -168,18 +171,24 @@ function bootSite({ top = 0, menu = false, dialog = false } = {}) {
   assert.equal(oldLayout.get('hero-title').style['--headline-x'], '16px', 'Unrelated saved headline position stays intact');
   const loader = bootLoader();
   assert.equal(loader.video.src, 'assets/ligarent-loader-clips-234-720p.mp4');
-  assert.equal(loader.video.playbackRate, 2);
+  assert.equal(loader.video.playbackRate, 3);
   assert.equal(loader.emit('window', 'wheel').prevented, true, 'The reel receives no accidental frame scroll');
+  loader.video.currentTime = 10;
+  loader.emit(loader.video, 'timeupdate');
+  assert.match(loader.count.textContent, /^03 \/ 04 · 5[0-9]%$/, 'The visible count advances with clip 3');
+  loader.video.currentTime = 16;
+  loader.emit(loader.video, 'timeupdate');
+  assert.match(loader.count.textContent, /^04 \/ 04 · 8[0-9]%$/, 'The visible count advances with clip 4');
   loader.emit(loader.video, 'ended');
-  loader.flushTimers();
-  assert.equal(loader.reel.hidden, true, 'Finished reel reveals the intro');
-  assert.equal(loader.document.lastEvent, 'intro-loader-ready');
+  assert.equal(loader.location.href, './site.html?from=reel', 'Finished reel enters the current website with a GSAP handoff');
   const stalledLoader = bootLoader();
   stalledLoader.flushTimers();
-  assert.equal(stalledLoader.reel.hidden, true, 'The reel failsafe never traps visitors');
+  assert.equal(stalledLoader.location.href, './site.html', 'The reel failsafe never traps visitors');
   const loaderReturn = bootLoader({ reverse: true });
   assert.equal(loaderReturn.reel.hidden, true, 'Returning from the site bypasses the loader');
   assert.equal(loaderReturn.video.src, undefined);
+  const loaderReduced = bootLoader({ reduced: true });
+  assert.equal(loaderReduced.location.href, './site.html', 'Reduced motion skips directly to the current website');
   const loadingIntro = await boot({ loaderVisible: true });
   assert.equal(loadingIntro.get('poster').inert, true, 'Poster stays inert under the reel');
   loadingIntro.get('opening-reel').hidden = true;
@@ -254,5 +263,5 @@ function bootSite({ top = 0, menu = false, dialog = false } = {}) {
   unavailable.emit(unavailable.get('start-film'), 'click');
   assert.equal(unavailable.page.location.href, './site.html');
 
-  console.log('PASS: opening reel, no speed button, playback/frame timeout fallbacks, loader bypass on return, direct site exit, reverse from site top, forward/pause/reverse frames, touch, skip, CTA links, and reduced motion.');
+  console.log('PASS: faster numbered opening reel, current-site GSAP handoff, no speed button, timeout fallback, loader bypass on return, reverse from site top, forward/pause/reverse frames, touch, skip, CTA links, and reduced motion.');
 })().catch(error => { console.error(error); process.exitCode = 1; });
