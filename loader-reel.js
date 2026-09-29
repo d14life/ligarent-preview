@@ -21,18 +21,59 @@
     return;
   }
   if (reducedMotion) {
-    location.replace('./site.html');
+    releaseIntro();
     return;
   }
 
   let closing = false;
   const safetyTimer = setTimeout(() => finish(false), 12000);
-  function finish(showHandoff) {
+  function finish(animate) {
     if (closing) return;
     closing = true;
     clearTimeout(safetyTimer);
     video.pause();
-    location.replace(`./site.html${showHandoff ? '?from=reel' : ''}`);
+    const poster = document.getElementById('poster');
+    const target = poster?.querySelector('.poster__brand');
+    if (!animate || !globalThis.gsap || !target) {
+      releaseIntro();
+      return;
+    }
+
+    // The generated reel ends on the sign against black. Move a live copy of
+    // that sign into the bulldozer hero header; the fleet page comes later.
+    const clone = target.cloneNode(true);
+    clone.classList.add('opening-reel__moving-mark');
+    clone.setAttribute('aria-hidden', 'true');
+    document.body.append(clone);
+    const destination = target.getBoundingClientRect();
+    const cloneRect = clone.getBoundingClientRect();
+    const fit = Math.max(innerWidth / 1280, innerHeight / 720);
+    const sourceX = (innerWidth - 1280 * fit) / 2 + 333 * fit;
+    const sourceY = (innerHeight - 720 * fit) / 2 + 122 * fit;
+    const sourceVisible = sourceX >= 0 && sourceX < innerWidth;
+    const { gsap } = globalThis;
+    target.style.visibility = 'hidden';
+    gsap.set(poster, { opacity: 0 });
+    gsap.set(clone, {
+      x: sourceVisible ? sourceX : destination.left,
+      y: sourceVisible ? sourceY : destination.top,
+      scale: sourceVisible ? 304 * fit / Math.max(1, cloneRect.width) : 1,
+      opacity: 0
+    });
+    const complete = () => {
+      target.style.visibility = '';
+      gsap.set(poster, { clearProps: 'opacity' });
+      clone.remove();
+      releaseIntro();
+    };
+    gsap.timeline({ onComplete: complete })
+      .to(reel, { opacity: 0, duration: .42, ease: 'power1.inOut' }, 0)
+      .to(poster, { opacity: 1, duration: .4, ease: 'power1.out' }, .06)
+      .to(clone, { opacity: 1, duration: .12, ease: 'power1.out' }, 0)
+      .to(clone, { x: destination.left, y: destination.top, scale: 1,
+        duration: .48, ease: 'power2.out' }, .04)
+      .call(() => { target.style.visibility = ''; }, null, .42)
+      .to(clone, { opacity: 0, duration: .1, ease: 'power1.out' }, .43);
   }
 
   function updateProgress() {

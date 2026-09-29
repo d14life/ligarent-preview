@@ -151,6 +151,8 @@ function bootSite({ top = 0, menu = false, dialog = false } = {}) {
   assert.doesNotMatch(html, /href="\.\/index\.html/);
   assert.match(html, /id="opening-reel"/);
   assert.match(html, /loader-reel\.js/);
+  assert.match(html, /vendor\/gsap\.min\.js/);
+  assert.doesNotMatch(loaderSource, /location\.replace\(`\.\/site\.html/);
   assert.doesNotMatch(html, /Ускорить ×10|opening-skip/);
   assert.match(css, /\.opening-reel/);
   assert.doesNotMatch(css, /\.opening-reel__skip/);
@@ -180,15 +182,17 @@ function bootSite({ top = 0, menu = false, dialog = false } = {}) {
   loader.emit(loader.video, 'timeupdate');
   assert.match(loader.count.textContent, /^04 \/ 04 · 9[0-9]%$/, 'The visible count advances with clip 4');
   loader.emit(loader.video, 'ended');
-  assert.equal(loader.location.href, './site.html?from=reel', 'Finished reel enters the current website with a GSAP handoff');
+  assert.equal(loader.location.href, 'http://test/start.html', 'Finished reel stays on the bulldozer hero page');
+  assert.equal(loader.reel.hidden, true, 'Finished reel reveals the live bulldozer hero');
+  assert.equal(loader.document.lastEvent, 'intro-loader-ready', 'The hero receives its ready event');
   const stalledLoader = bootLoader();
   stalledLoader.flushTimers();
-  assert.equal(stalledLoader.location.href, './site.html', 'The reel failsafe never traps visitors');
+  assert.equal(stalledLoader.reel.hidden, true, 'The reel failsafe reveals the hero rather than trapping visitors');
   const loaderReturn = bootLoader({ reverse: true });
   assert.equal(loaderReturn.reel.hidden, true, 'Returning from the site bypasses the loader');
   assert.equal(loaderReturn.video.src, undefined);
   const loaderReduced = bootLoader({ reduced: true });
-  assert.equal(loaderReduced.location.href, './site.html', 'Reduced motion skips directly to the current website');
+  assert.equal(loaderReduced.reel.hidden, true, 'Reduced motion skips directly to the bulldozer hero');
   const loadingIntro = await boot({ loaderVisible: true });
   assert.equal(loadingIntro.get('poster').inert, true, 'Poster stays inert under the reel');
   loadingIntro.get('opening-reel').hidden = true;
@@ -263,5 +267,5 @@ function bootSite({ top = 0, menu = false, dialog = false } = {}) {
   unavailable.emit(unavailable.get('start-film'), 'click');
   assert.equal(unavailable.page.location.href, './site.html');
 
-  console.log('PASS: faster numbered opening reel, current-site GSAP handoff, no speed button, timeout fallback, loader bypass on return, reverse from site top, forward/pause/reverse frames, touch, skip, CTA links, and reduced motion.');
+  console.log('PASS: numbered opening reel reveals bulldozer hero, timeout fallback, loader bypass on return, reverse from site top, forward/pause/reverse frames, touch, skip, CTA links, and reduced motion.');
 })().catch(error => { console.error(error); process.exitCode = 1; });
