@@ -31,7 +31,7 @@ class Element {
   getBoundingClientRect() { return { left: 0, top: 0, right: 350, width: 390, height: 844 }; }
 }
 
-async function boot({ reduced = false, delayed = false, failed = false, hash = '', reverse = 0, loaderVisible = false, storage = {} } = {}) {
+async function boot({ reduced = false, delayed = false, failed = false, hash = '', reverse = 0, loaderVisible = false, storage = {}, width = 390, height = 844 } = {}) {
   const elements = {};
   const get = id => elements[id] ??= new Element(id);
   const controls = {};
@@ -39,10 +39,10 @@ async function boot({ reduced = false, delayed = false, failed = false, hash = '
   get('poster').querySelectorAll = () => [];
   get('film').getContext = () => ({ drawImage() {} });
   get('opening-reel').hidden = !loaderVisible;
-  const bundle = new ArrayBuffer(4 + 87 * 4 + 87);
+  const bundle = new ArrayBuffer(4 + 116 * 4 + 116);
   const view = new DataView(bundle);
-  view.setUint32(0, 87, true);
-  for (let index = 0; index < 87; index++) view.setUint32(4 + index * 4, 1, true);
+  view.setUint32(0, 116, true);
+  for (let index = 0; index < 116; index++) view.setUint32(4 + index * 4, 1, true);
   const events = {};
   const documentEvents = {};
   const frames = [];
@@ -51,12 +51,13 @@ async function boot({ reduced = false, delayed = false, failed = false, hash = '
   const page = {
     document: { getElementById: get, body: new Element(), documentElement: new Element(), addEventListener(type, listener) { (documentEvents[type] ??= []).push(listener); } },
     Blob, DataView, URL, URLSearchParams, console: { error() {} },
-    fetch: async () => {
+    fetch: async url => {
+      page.lastFetch = url;
       if (failed) throw new Error('download failed');
       return { ok: true, arrayBuffer: async () => delayed ? new Promise(() => {}) : bundle };
     },
-    createImageBitmap: async () => ({ width: 640, height: 360, close() {} }),
-    innerWidth: 390, innerHeight: 844, devicePixelRatio: 2,
+    createImageBitmap: async () => ({ width: width <= 600 && height > width ? 512 : 960, height: width <= 600 && height > width ? 1106 : 540, close() {} }),
+    innerWidth: width, innerHeight: height, devicePixelRatio: 2,
     scrollY: 0, // Deliberately fixed: Safari may clamp actual page scrolling.
     matchMedia: query => ({ matches: query.includes('reduce') && reduced }),
     location: { href: `http://test/start.html${reverse ? `?reverse=${reverse}` : ''}${hash}`, search: reverse ? `?reverse=${reverse}` : '', hash, hostname: 'test', origin: 'http://test', replace(url) { this.href = url; this.replaced = true; } },
@@ -68,10 +69,10 @@ async function boot({ reduced = false, delayed = false, failed = false, hash = '
   };
   vm.runInNewContext(source, page);
   for (let index = 0; index < 600; index++) await Promise.resolve();
-  function emit(target, type, overrides = {}) {
+  function emit(target, type, overrides = {}, flush = true) {
     const event = { target: get('poster'), touches: [], preventDefault() { this.prevented = true; }, ...overrides };
     for (const listener of (target === 'window' ? events : target === 'document' ? documentEvents : target.listeners)[type] ?? []) listener(event);
-    while (frames.length) frames.shift()();
+    if (flush) while (frames.length) frames.shift()();
     return event;
   }
   async function fireTimeouts() {
@@ -160,14 +161,21 @@ function bootSite({ top = 0, menu = false, dialog = false } = {}) {
   assert.doesNotMatch(css, /\.opening-reel__skip/);
   assert.match(liveHtml, /site-return\.js/);
   assert.match(liveCss, /#machines\.fleet\{padding-top:24px\}/);
-  for (const asset of ['assets/ligarent-loader-first.jpg', 'assets/ligarent-loader-clean-last-720p.jpg', 'assets/ligarent-loader-clips-234-clean-720p.mp4', 'assets/intro-sequence/desktop/frame-000.webp', 'assets/intro-sequence/desktop/frame-086.webp', 'assets/d6r-no-rods.png', 'assets/d7r.png', 'assets/d8r.png']) {
+  for (const asset of ['assets/ligarent-loader-first.jpg', 'assets/ligarent-loader-clean-last-720p.jpg', 'assets/ligarent-loader-clips-234-clean-720p.mp4', 'assets/intro-sequence/desktop/frame-000.webp', 'assets/intro-sequence/desktop/frame-115.webp', 'assets/intro-sequence/mobile/frame-000.webp', 'assets/intro-sequence/mobile/frame-115.webp', 'assets/d6r-no-rods.png', 'assets/d7r.png', 'assets/d8r.png']) {
     assert.ok(existsSync(join(__dirname, introRoot, asset)), `${asset} must load on the opening or live page`);
+  }
+  for (const size of ['desktop', 'mobile']) {
+    const bundle = readFileSync(join(__dirname, introRoot, `assets/intro-sequence/${size}.frames`));
+    assert.equal(bundle.readUInt32LE(0), 116, `${size} bundle has the smoother 16 fps frame count`);
   }
   assert.doesNotMatch(html, /id="live-site"|id="poster-runway"/);
   assert.match(css, /body\s*\{[^}]*overflow:\s*hidden/);
   assert.doesNotMatch(css, /--copy-lower|--copy-text-rise/);
-  assert.doesNotMatch(css, /--intro-brand-cover|--intro-title-opacity/, 'Brand and headline must stay visible over the bulldozer');
-  assert.doesNotMatch(source, /renderHeadlineOcclusion|--intro-brand-cover|--intro-title-opacity/, 'Scrolling must not hide the persistent signs');
+  assert.doesNotMatch(css, /--intro-brand-cover/, 'The top-left brand stays visible over the bulldozer');
+  assert.match(source, /renderHeadlineOcclusion\(filmTime,/, 'The title disappears as the machine crosses it');
+  assert.doesNotMatch(source, /--intro-brand-cover/, 'Scrolling never covers the top-left brand');
+  assert.match(html, /mobile\/frame-000\.webp/, 'Phones preload their own 4K-source portrait still');
+  assert.match(source, /SCROLL_PIXELS_PER_SECOND = 26/, 'The approved fast swipe distance stays intact');
 
   const legacyHash = await boot({ hash: '#machines' });
   assert.equal(legacyHash.page.location.href, './site.html#machines', 'Intro deep link must reach the real site');
@@ -214,24 +222,37 @@ function bootSite({ top = 0, menu = false, dialog = false } = {}) {
 
   const { page, get, emit, frames } = await boot();
   assert.equal(get('start-film').disabled, false);
+  assert.match(page.lastFetch, /mobile\.frames\?v=/, 'Portrait phones load the mobile sequence');
   emit('window', 'wheel', { deltaY: 70, deltaMode: 0 });
   const forwardFrame = Number(get('film').dataset.frame);
   assert.ok(forwardFrame >= 15, 'A short wheel swipe advances far into the film');
   assert.equal(page.scrollY, 0, 'The intro must advance even when browser scrolling is clamped');
   assert.equal(page.location.href, 'http://test/start.html');
   assert.equal(frames.length, 0, 'Stopping input starts no self-running animation');
-  assert.equal(get('hero-title').style.clipPath, undefined, 'The headline stays whole as the bulldozer approaches');
+  assert.match(get('hero-title').style.clipPath, /^polygon\(/, 'The approaching bulldozer clips the headline');
   emit('window', 'wheel', { deltaY: -35, deltaMode: 0 });
   assert.ok(Number(get('film').dataset.frame) < forwardFrame, 'Upward scrolling immediately reverses the film');
+
+  const coalesced = await boot();
+  coalesced.emit('window', 'wheel', { deltaY: 20, deltaMode: 0 }, false);
+  coalesced.emit('window', 'wheel', { deltaY: 20, deltaMode: 0 }, false);
+  assert.equal(coalesced.frames.length, 1, 'Rapid scroll events draw once per animation frame');
+  coalesced.frames.shift()();
+  assert.ok(Number(coalesced.get('film').dataset.frame) > 0, 'The coalesced draw uses the latest scroll position');
 
   const nearEnd = await boot();
   nearEnd.emit('window', 'wheel', { deltaY: 210, deltaMode: 0 });
   assert.ok(Number(nearEnd.get('film').dataset.frame) > 80, 'The final bulldozer frames render before site handoff');
-  assert.equal(nearEnd.get('hero-title').style.clipPath, undefined, 'The full headline survives the final frame');
+  assert.match(nearEnd.get('hero-title').style.clipPath, /^polygon\(/, 'The headline disappears before the final frame');
   assert.equal(nearEnd.get('poster').style['--intro-brand-cover'], undefined, 'The top-left brand remains uncovered');
   assert.equal(nearEnd.page.location.href, 'http://test/start.html');
   nearEnd.emit('window', 'wheel', { deltaY: -175, deltaMode: 0 });
   assert.equal(nearEnd.page.document.body.dataset.phase, 'film', 'Reversing from the final frame restores earlier frames');
+  nearEnd.emit('window', 'wheel', { deltaY: -100, deltaMode: 0 });
+  assert.equal(nearEnd.get('hero-title').style.clipPath, '', 'Reversing to the poster restores the full headline');
+
+  const landscape = await boot({ width: 844, height: 390 });
+  assert.match(landscape.page.lastFetch, /desktop\.frames\?v=/, 'Phone landscape uses full-width frames');
 
   const touch = await boot();
   touch.emit('window', 'touchstart', { touches: [{ clientY: 700 }] });
@@ -291,5 +312,5 @@ function bootSite({ top = 0, menu = false, dialog = false } = {}) {
   unavailable.emit(unavailable.get('start-film'), 'click');
   assert.equal(unavailable.page.location.href, './site.html');
 
-  console.log('PASS: numbered opening reel, one-swipe film completion, immediate pause/reverse, loader bypass on return, reverse from site top, timeout fallback, skip, CTA links, and reduced motion.');
+  console.log('PASS: 4K-source mobile assets, title occlusion with persistent brand, numbered opening reel, one-swipe completion, immediate pause/reverse, site return, timeout fallback, skip, CTA links, and reduced motion.');
 })().catch(error => { console.error(error); process.exitCode = 1; });

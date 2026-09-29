@@ -11,6 +11,9 @@
     reel.hidden = true;
     reel.inert = true;
     reel.setAttribute('aria-busy', 'false');
+    video.pause();
+    video.removeAttribute('src');
+    video.load();
     document.body.classList.remove('is-loading');
     document.dispatchEvent(new Event('intro-loader-ready'));
   }

@@ -19,7 +19,7 @@ body { margin: 0; height: 100svh; overflow: hidden; background: var(--ink); colo
   position: absolute;
   inset: 0;
   z-index: -2;
-  background: var(--ink) url('assets/intro-sequence/desktop/frame-000.webp') center / cover no-repeat;
+  background: var(--ink) url('assets/intro-sequence/desktop/frame-000.webp?v=20260929-4k-16fps-27') center / cover no-repeat;
   opacity: var(--intro-still-opacity, 1);
 }
 .poster::before {
@@ -163,7 +163,7 @@ body { margin: 0; height: 100svh; overflow: hidden; background: var(--ink); colo
 }
 .poster__scroll span:last-child { color: var(--yellow); font-size: 29px; line-height: .6; transition: transform 150ms ease-out; }
 .poster__scroll:hover span:last-child { transform: translateY(4px); }
-.film-stage { position: fixed; inset: 0; z-index: 1; overflow: hidden; background: #05080a url('assets/intro-sequence/desktop/frame-000.webp') center / cover no-repeat; opacity: 0; pointer-events: none; }
+.film-stage { position: fixed; inset: 0; z-index: 1; overflow: hidden; background: #05080a url('assets/intro-sequence/desktop/frame-000.webp?v=20260929-4k-16fps-27') center / cover no-repeat; opacity: 0; pointer-events: none; }
 .film-stage canvas { position: absolute; inset: 0; display: block; width: 100%; height: 100%; object-fit: cover; object-position: center; }
 .film-stage__offer {
   position: absolute;
@@ -286,6 +286,13 @@ body[data-phase="handoff"] .poster.is-editing .poster__details span { cursor: de
   .poster__scroll { right: 20px; bottom: 18px; font-size: 12px; }
   .headline-editor { top: 70px; max-height: calc(100dvh - 125px); overflow-y: auto; }
 }
+@media (max-width: 600px) and (orientation: portrait) {
+  .poster::after { background-image: url('assets/intro-sequence/mobile/frame-000.webp?v=20260929-4k-16fps-27'); background-position: center; }
+  .film-stage { background-image: url('assets/intro-sequence/mobile/frame-000.webp?v=20260929-4k-16fps-27'); }
+}
+@media (max-width: 600px) and (orientation: landscape) {
+  .poster::after { background-position: center; }
+}
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
   .poster__scroll span:last-child { transition: none; }
@@ -302,7 +309,10 @@ body.is-loading { overflow: hidden; }
 .intro-returning .poster { visibility: hidden; }
 .intro-returning .film-stage {
   opacity: 1;
-  background-image: url('assets/intro-sequence/desktop/frame-086.webp');
+  background-image: url('assets/intro-sequence/desktop/frame-115.webp?v=20260929-4k-16fps-27');
+}
+@media (max-width: 600px) and (orientation: portrait) {
+  .intro-returning .film-stage { background-image: url('assets/intro-sequence/mobile/frame-115.webp?v=20260929-4k-16fps-27'); }
 }
 .opening-reel {
   position: fixed;
