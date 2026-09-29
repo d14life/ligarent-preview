@@ -153,6 +153,8 @@ function bootSite({ top = 0, menu = false, dialog = false } = {}) {
   assert.match(html, /loader-reel\.js/);
   assert.match(html, /vendor\/gsap\.min\.js/);
   assert.doesNotMatch(loaderSource, /location\.replace\(`\.\/site\.html/);
+  assert.match(loaderSource, /drawImage\(video, 333, 122, 304, 83/, 'The moving mark comes from the final video frame');
+  assert.match(loaderSource, /reel\.style\.transition = 'none'/, 'The old video sign cannot ghost over its moving copy');
   assert.doesNotMatch(html, /Ускорить ×10|opening-skip/);
   assert.match(css, /\.opening-reel/);
   assert.doesNotMatch(css, /\.opening-reel__skip/);

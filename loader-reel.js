@@ -39,41 +39,74 @@
       return;
     }
 
-    // The generated reel ends on the sign against black. Move a live copy of
-    // that sign into the bulldozer hero header; the fleet page comes later.
+    // Capture the exact last video sign, so the handoff never paints two signs.
+    const fit = Math.max(innerWidth / 1280, innerHeight / 720);
+    const sourceWidth = 304 * fit;
+    const sourceX = (innerWidth - 1280 * fit) / 2 + 333 * fit;
+    const sourceY = (innerHeight - 720 * fit) / 2 + 122 * fit;
+    const sourceVisible = sourceX + sourceWidth > 0 && sourceX < innerWidth;
+    let captured = null;
+    try {
+      captured = document.createElement('canvas');
+      captured.width = 304;
+      captured.height = 83;
+      captured.getContext('2d').drawImage(video, 333, 122, 304, 83, 0, 0, 304, 83);
+      captured.className = 'opening-reel__captured-mark';
+      captured.style.width = `${sourceWidth}px`;
+      captured.style.height = `${83 * fit}px`;
+      document.body.append(captured);
+    } catch (_) {
+      captured?.remove();
+      captured = null;
+    }
+
+    // Morph that single captured mark into the clean header mark while the
+    // actual bulldozer hero fades up underneath it.
     const clone = target.cloneNode(true);
     clone.classList.add('opening-reel__moving-mark');
     clone.setAttribute('aria-hidden', 'true');
     document.body.append(clone);
     const destination = target.getBoundingClientRect();
     const cloneRect = clone.getBoundingClientRect();
-    const fit = Math.max(innerWidth / 1280, innerHeight / 720);
-    const sourceX = (innerWidth - 1280 * fit) / 2 + 333 * fit;
-    const sourceY = (innerHeight - 720 * fit) / 2 + 122 * fit;
-    const sourceVisible = sourceX >= 0 && sourceX < innerWidth;
     const { gsap } = globalThis;
+    const previousBackground = document.body.style.backgroundColor;
+    document.body.style.backgroundColor = '#000';
     target.style.visibility = 'hidden';
     gsap.set(poster, { opacity: 0 });
     gsap.set(clone, {
       x: sourceVisible ? sourceX : destination.left,
       y: sourceVisible ? sourceY : destination.top,
-      scale: sourceVisible ? 304 * fit / Math.max(1, cloneRect.width) : 1,
-      opacity: 0
+      scale: sourceVisible ? sourceWidth / Math.max(1, cloneRect.width) : 1,
+      opacity: captured ? 0 : 1
     });
+    if (captured) gsap.set(captured, { x: sourceX, y: sourceY, opacity: 1 });
+    // Remove the video in the same paint that installs its captured sign.
+    reel.style.transition = 'none';
+    gsap.set(reel, { opacity: 0 });
+    let completed = false;
     const complete = () => {
+      if (completed) return;
+      completed = true;
+      clearTimeout(animationSafety);
       target.style.visibility = '';
       gsap.set(poster, { clearProps: 'opacity' });
+      document.body.style.backgroundColor = previousBackground;
+      captured?.remove();
       clone.remove();
       releaseIntro();
     };
-    gsap.timeline({ onComplete: complete })
-      .to(reel, { opacity: 0, duration: .42, ease: 'power1.inOut' }, 0)
-      .to(poster, { opacity: 1, duration: .4, ease: 'power1.out' }, .06)
-      .to(clone, { opacity: 1, duration: .12, ease: 'power1.out' }, 0)
+    const animationSafety = setTimeout(complete, 1500);
+    const timeline = gsap.timeline({ onComplete: complete })
+      .to(poster, { opacity: 1, duration: .42, ease: 'power1.out' }, 0)
       .to(clone, { x: destination.left, y: destination.top, scale: 1,
-        duration: .48, ease: 'power2.out' }, .04)
-      .call(() => { target.style.visibility = ''; }, null, .42)
-      .to(clone, { opacity: 0, duration: .1, ease: 'power1.out' }, .43);
+        duration: .5, ease: 'power2.out' }, 0)
+      .call(() => { target.style.visibility = ''; }, null, .44)
+      .to(clone, { opacity: 0, duration: .08, ease: 'power1.out' }, .44);
+    if (captured) timeline
+      .to(captured, { x: destination.left, y: destination.top,
+        scale: destination.width / sourceWidth, duration: .5, ease: 'power2.out' }, 0)
+      .to(captured, { opacity: 0, duration: .16, ease: 'power1.out' }, .18)
+      .to(clone, { opacity: 1, duration: .16, ease: 'power1.out' }, .18);
   }
 
   function updateProgress() {
