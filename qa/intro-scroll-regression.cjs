@@ -212,33 +212,43 @@ function bootSite({ top = 0, menu = false, dialog = false } = {}) {
 
   const { page, get, emit, frames } = await boot();
   assert.equal(get('start-film').disabled, false);
-  emit('window', 'wheel', { deltaY: 600, deltaMode: 0 });
-  assert.equal(get('film').dataset.frame, '38');
+  emit('window', 'wheel', { deltaY: 70, deltaMode: 0 });
+  const forwardFrame = Number(get('film').dataset.frame);
+  assert.ok(forwardFrame >= 15, 'A short wheel swipe advances far into the film');
   assert.equal(page.scrollY, 0, 'The intro must advance even when browser scrolling is clamped');
   assert.equal(page.location.href, 'http://test/start.html');
   assert.equal(frames.length, 0, 'Stopping input starts no self-running animation');
-  emit('window', 'wheel', { deltaY: -300, deltaMode: 0 });
-  assert.equal(get('film').dataset.frame, '14');
-  emit('window', 'touchstart', { touches: [{ clientY: 700 }] });
-  emit('window', 'touchmove', { touches: [{ clientY: 500 }] });
-  assert.equal(get('film').dataset.frame, '30');
-  emit('window', 'touchend');
-  assert.equal(get('film').dataset.frame, '30', 'Finger release freezes the intro');
-  emit('window', 'touchstart', { touches: [{ clientY: 400 }] });
-  emit('window', 'touchmove', { touches: [{ clientY: 600 }] });
-  assert.equal(get('film').dataset.frame, '14', 'Downward finger reverses the intro');
-  emit('window', 'wheel', { deltaY: 9999, deltaMode: 0 });
-  assert.equal(page.location.href, './site.html', 'Natural scrolling opens the real site');
-  assert.equal(page.location.replaced, true);
+  emit('window', 'wheel', { deltaY: -35, deltaMode: 0 });
+  assert.ok(Number(get('film').dataset.frame) < forwardFrame, 'Upward scrolling immediately reverses the film');
 
-  const reverse = await boot({ reverse: 120 });
+  const touch = await boot();
+  touch.emit('window', 'touchstart', { touches: [{ clientY: 700 }] });
+  touch.emit('window', 'touchmove', { touches: [{ clientY: 620 }] });
+  const touchFrame = touch.get('film').dataset.frame;
+  assert.ok(Number(touchFrame) > 15, 'A short finger movement advances the film visibly');
+  touch.emit('window', 'touchend');
+  assert.equal(touch.get('film').dataset.frame, touchFrame, 'Finger release freezes the intro');
+  touch.emit('window', 'touchstart', { touches: [{ clientY: 400 }] });
+  touch.emit('window', 'touchmove', { touches: [{ clientY: 460 }] });
+  assert.equal(touch.page.document.body.dataset.phase, 'poster', 'Dragging back reaches the opening page');
+
+  const singleSwipe = await boot();
+  singleSwipe.emit('window', 'touchstart', { touches: [{ clientY: 700 }] });
+  singleSwipe.emit('window', 'touchmove', { touches: [{ clientY: 450 }] });
+  assert.equal(singleSwipe.page.location.href, './site.html', 'One ordinary 250px swipe finishes the film');
+  assert.equal(singleSwipe.page.location.replaced, true);
+  const wheelSwipe = await boot();
+  wheelSwipe.emit('window', 'wheel', { deltaY: 240, deltaMode: 0 });
+  assert.equal(wheelSwipe.page.location.href, './site.html', 'One trackpad swipe can finish the film');
+
+  const reverse = await boot({ reverse: 60 });
   const reverseFirstFrame = Number(reverse.get('film').dataset.frame);
-  assert.ok(reverseFirstFrame > 70, 'Returning from the site starts near the last film frame');
+  assert.ok(reverseFirstFrame > 40, 'Returning from the site reopens the film near its later frames');
   reverse.emit('window', 'wheel', { deltaY: -450, deltaMode: 0 });
   assert.ok(Number(reverse.get('film').dataset.frame) < reverseFirstFrame, 'Upward scrolling rewinds the frames');
   reverse.emit('window', 'wheel', { deltaY: -9999, deltaMode: 0 });
   assert.equal(reverse.page.document.body.dataset.phase, 'poster', 'Rewinding reaches the opening page');
-  assert.equal(reverse.page.location.href, 'http://test/start.html?reverse=120');
+  assert.equal(reverse.page.location.href, 'http://test/start.html?reverse=60');
 
   const siteMiddle = bootSite({ top: 200 });
   siteMiddle.emit('wheel', { deltaY: -120 });
@@ -269,5 +279,5 @@ function bootSite({ top = 0, menu = false, dialog = false } = {}) {
   unavailable.emit(unavailable.get('start-film'), 'click');
   assert.equal(unavailable.page.location.href, './site.html');
 
-  console.log('PASS: numbered opening reel reveals bulldozer hero, timeout fallback, loader bypass on return, reverse from site top, forward/pause/reverse frames, touch, skip, CTA links, and reduced motion.');
+  console.log('PASS: numbered opening reel, one-swipe film completion, immediate pause/reverse, loader bypass on return, reverse from site top, timeout fallback, skip, CTA links, and reduced motion.');
 })().catch(error => { console.error(error); process.exitCode = 1; });

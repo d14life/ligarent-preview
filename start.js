@@ -29,7 +29,8 @@
   const sequenceSize = innerWidth <= 900 || matchMedia('(pointer: coarse)').matches ? 'mobile' : 'desktop';
   const FRAME_COUNT = 87;
   const FIRST_CLIP_END = 7.25;
-  const SCROLL_PIXELS_PER_SECOND = 150;
+  // A single ordinary finger swipe should cover the short first clip.
+  const SCROLL_PIXELS_PER_SECOND = 26;
   const frames = new Array(FRAME_COUNT);
   const context = film.getContext('2d', { alpha: false });
   let drawnFrame = -1;
@@ -205,7 +206,7 @@
   details.forEach((detail, index) => enablePositionDrag(detail, `detail${index + 1}X`, `detail${index + 1}Y`));
 
   function updateScrollLayout() {
-    leadDistance = 120;
+    leadDistance = 30;
     filmDistance = reduceMotion ? 0 : FIRST_CLIP_END * SCROLL_PIXELS_PER_SECOND;
     totalDistance = leadDistance + filmDistance;
     const pixelRatio = Math.min(devicePixelRatio || 1, 1.5);
