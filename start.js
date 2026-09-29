@@ -25,8 +25,8 @@
   const values = Object.fromEntries(axes.map(axis => [axis, axis === 'scale' ? 1 : 0]));
   const layoutStorageKey = 'ligarent-headline-3d-v2';
   const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
-  // Decode once; scrolling only draws an already prepared frame. No seeks,
-  // playback clock, easing loop, or asynchronous frame swap follows input.
+  // Decode once so forward and reverse motion draw prepared frames instead of
+  // seeking through a video on every gesture.
   const sequenceSize = innerWidth <= 600 && innerHeight > innerWidth ? 'mobile' : 'desktop';
   const FRAME_COUNT = 116;
   const FIRST_CLIP_END = 7.25;
@@ -49,6 +49,9 @@
   let lastPosterInteractive = null;
   let lastSkipVisible = null;
   let lastPhase = '';
+  let autoTarget = null;
+  let autoFramePending = false;
+  let lastAutoTime = null;
 
   const clamp = (value, min = 0, max = 1) => Math.min(max, Math.max(min, value));
   const lerp = (start, end, progress) => start + (end - start) * progress;
@@ -354,7 +357,50 @@
     });
   }
 
+  function scheduleAutoFrame() {
+    if (autoFramePending || autoTarget === null || !assetsReady) return;
+    autoFramePending = true;
+    requestAnimationFrame(time => {
+      autoFramePending = false;
+      if (autoTarget === null) return;
+      if (lastAutoTime === null) lastAutoTime = time - 16;
+      const elapsed = Math.min(64, Math.max(0, time - lastAutoTime));
+      lastAutoTime = time;
+      const step = totalDistance * elapsed / 1150;
+      introPosition = autoTarget > introPosition
+        ? Math.min(autoTarget, introPosition + step)
+        : Math.max(autoTarget, introPosition - step);
+      renderScroll();
+      if (introPosition === autoTarget) {
+        autoTarget = null;
+        lastAutoTime = null;
+      } else if (autoTarget > introPosition && !sitePrepared && introPosition >= filmEnd) {
+        // Keep the last image until the live page is fully prepared.
+        lastAutoTime = null;
+      } else scheduleAutoFrame();
+    });
+  }
+
+  function autoFinish(direction) {
+    if (!direction) return;
+    if (direction > 0 && window.ligarentSiteStatus === 'failed') {
+      location.href = siteUrl;
+      return;
+    }
+    if (reduceMotion) {
+      if (direction > 0) openSite();
+      else { introPosition = 0; renderScroll(); }
+      return;
+    }
+    const target = direction > 0 ? totalDistance : 0;
+    if (target !== autoTarget) lastAutoTime = null;
+    autoTarget = target;
+    scheduleAutoFrame();
+  }
+
   function openSite(hash = '') {
+    autoTarget = null;
+    lastAutoTime = null;
     if (!sitePrepared) { location.href = `${siteUrl}${hash}`; return; }
     introPosition = totalDistance;
     renderScroll();
@@ -366,6 +412,7 @@
     if (!assetsReady) return;
     introPosition = leadDistance;
     renderScroll();
+    autoFinish(1);
   });
   skipButton.addEventListener('click', () => openSite());
   poster.addEventListener('click', event => {
@@ -376,23 +423,15 @@
     event.preventDefault();
     openSite(target.hash);
   });
-  function scrollIntro(delta) {
-    if (window.ligarentSiteStatus === 'failed' && delta > 0 && introPosition + delta >= filmEnd) {
-      location.href = siteUrl;
-      return;
-    }
-    introPosition = clamp(introPosition + delta, 0, totalDistance);
-    scheduleRender();
-  }
-
   addEventListener('wheel', event => {
     if (event.ctrlKey || editor.contains(event.target)) return;
     if (siteActive && (event.deltaY >= 0 || scrollY > 1 || document.body.classList.contains('menu-active') || event.target.closest('input, textarea, select, [contenteditable], .full-menu'))) return;
     if (!assetsReady && !sequenceFailed) { event.preventDefault(); return; }
-    if (sequenceFailed) return;
+    if (sequenceFailed) { if (event.deltaY > 0) location.href = siteUrl; return; }
     event.preventDefault();
     const unit = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? innerHeight : 1;
-    scrollIntro(event.deltaY * unit);
+    const delta = event.deltaY * unit;
+    if (Math.abs(delta) >= 3) autoFinish(Math.sign(delta));
   }, { passive: false });
   addEventListener('keydown', event => {
     if (editor.contains(event.target) || event.target.closest('input, textarea, select, button, a, [contenteditable]')) return;
@@ -401,14 +440,22 @@
     if (siteActive && (delta >= 0 || scrollY > 1 || document.body.classList.contains('menu-active'))) return;
     event.preventDefault();
     if (!assetsReady) return;
-    scrollIntro(delta);
+    autoFinish(Math.sign(delta));
   });
-  // Direct touch deltas keep the intro and handoff reversible. Once revealed,
-  // native website scrolling takes over without replacing the document.
+  // A finger gesture selects the endpoint. An opposite gesture turns the
+  // prepared sequence around from its current frame.
   let touchY = null;
+  let touchIntent = 0;
   let touchStartedOnIntro = false;
+  function steerTouch(delta) {
+    touchIntent += delta;
+    if (Math.abs(touchIntent) < 8) return;
+    autoFinish(Math.sign(touchIntent));
+    touchIntent = 0;
+  }
   addEventListener('touchstart', event => {
     touchY = event.touches.length === 1 ? event.touches[0].clientY : null;
+    touchIntent = 0;
     touchStartedOnIntro = !siteActive;
   }, { passive: true });
   addEventListener('touchmove', event => {
@@ -419,7 +466,7 @@
     if (siteActive) {
       if (delta < 0 && scrollY <= 1 && !document.body.classList.contains('menu-active') && !event.target.closest('input, textarea, select, [contenteditable], .full-menu')) {
         event.preventDefault();
-        scrollIntro(delta);
+        steerTouch(delta);
       } else if (touchStartedOnIntro && delta > 0) {
         event.preventDefault();
         scrollBy(0, delta);
@@ -429,12 +476,15 @@
     if (!assetsReady && !sequenceFailed) { event.preventDefault(); return; }
     if (sequenceFailed) return;
     event.preventDefault();
-    scrollIntro(delta);
+    steerTouch(delta);
   }, { passive: false });
-  for (const type of ['touchend', 'touchcancel']) addEventListener(type, () => { touchY = null; touchStartedOnIntro = false; }, { passive: true });
+  for (const type of ['touchend', 'touchcancel']) addEventListener(type, () => { touchY = null; touchIntent = 0; touchStartedOnIntro = false; }, { passive: true });
   addEventListener('resize', () => { updateScrollLayout(); scheduleRender(); }, { passive: true });
   document.addEventListener('intro-loader-ready', renderScroll);
-  document.addEventListener('ligarent-site-ready', () => { sitePrepared = true; renderScroll(); });
+  document.addEventListener('ligarent-site-ready', () => { sitePrepared = true; renderScroll(); scheduleAutoFrame(); });
+  document.addEventListener('ligarent-site-failed', () => {
+    if (autoTarget === totalDistance) location.href = siteUrl;
+  });
   updateScrollLayout();
   if (returningFromSite) introPosition = clamp(totalDistance - reverseAmount, 0, totalDistance - 1);
   trigger.disabled = true;
