@@ -299,3 +299,23 @@ body[data-phase="handoff"] .poster.is-editing .poster__details span { cursor: de
 html { overscroll-behavior-y: none; }
 
 .poster__scroll:disabled { cursor: wait; }
+
+body.is-loading { overflow: hidden; }
+.opening-reel {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  overflow: hidden;
+  background: #101d25 url('assets/ligarent-loader-first.jpg') center / cover no-repeat;
+  opacity: 1;
+  transition: opacity 360ms ease;
+}
+.opening-reel[hidden] { display: none; }
+.opening-reel.is-done { opacity: 0; pointer-events: none; }
+.opening-reel video { display: block; width: 100%; height: 100%; object-fit: cover; }
+.opening-reel__progress { position: absolute; inset: auto 0 0; height: 3px; background: #f6f7f740; }
+.opening-reel__progress span { display: block; width: 0; height: 100%; background: var(--yellow); }
+@media (prefers-reduced-motion: reduce) {
+  .opening-reel { transition: none; }
+  .opening-reel video { display: none; }
+}
