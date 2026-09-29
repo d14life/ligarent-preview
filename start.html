@@ -7,15 +7,21 @@
   <meta name="description" content="LIGARENT — двигаем грунт в срок.">
   <title>LIGARENT — Двигаем грунт в срок</title>
   <script>if (new URLSearchParams(location.search).has('reverse')) document.documentElement.classList.add('intro-returning');</script>
+  <link rel="preload" as="image" href="assets/ligarent-loader-first.jpg" fetchpriority="high">
   <link rel="preload" as="image" href="assets/intro-sequence/desktop/frame-000.webp" fetchpriority="high">
   <link rel="preload" as="image" href="assets/intro-sequence/desktop/frame-086.webp">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="start-dark.css?v=20260929-reversible-18">
-  <script src="start.js?v=20260929-reversible-18" defer></script>
+  <link rel="stylesheet" href="start-dark.css?v=20260929-loader-19">
+  <script src="loader-reel.js?v=20260929-loader-19" defer></script>
+  <script src="start.js?v=20260929-loader-19" defer></script>
 </head>
-<body>
-  <main class="poster" id="poster">
+<body class="is-loading">
+  <div class="opening-reel" id="opening-reel" role="status" aria-label="Вступительные кадры" aria-busy="true">
+    <video id="opening-video" data-src="assets/ligarent-loader-clips-234-720p.mp4" poster="assets/ligarent-loader-first.jpg" muted playsinline preload="auto" aria-hidden="true"></video>
+    <span class="opening-reel__progress" aria-hidden="true"><span id="opening-progress"></span></span>
+  </div>
+  <main class="poster" id="poster" inert aria-hidden="true">
     <header class="poster__header">
       <a class="poster__brand" href="./site.html" aria-label="LIGARENT — открыть сайт">LIGARENT</a>
       <nav class="poster__nav" aria-label="Разделы сайта">
