@@ -1,0 +1,13 @@
+* { box-sizing: border-box; }
+html, body { width: 100%; height: 100%; margin: 0; background: #05080a; }
+body { color: #fff; font-family: Arial, sans-serif; }
+.film { position: fixed; inset: 0; overflow: hidden; background: #05080a; }
+.film::after { content: ''; position: absolute; inset: 0; z-index: 2; background: #05080a; opacity: 0; pointer-events: none; transition: opacity .3s ease-in; }
+body.is-ending .film::after { opacity: 1; }
+.film video { display: block; width: 100%; height: 100%; object-fit: cover; background: #05080a url('assets/intro-sequence/desktop/frame-000.webp') center / cover no-repeat; }
+.film__skip, .film__play { position: absolute; z-index: 3; min-height: 44px; padding: 11px 17px; border: 1px solid #dce5eab3; background: #101d25c9; color: #fff; font: 800 15px/1.2 Arial, sans-serif; text-decoration: none; cursor: pointer; }
+.film__skip { top: clamp(16px, 2vw, 32px); right: clamp(16px, 2vw, 32px); }
+.film__play { top: 50%; left: 50%; transform: translate(-50%, -50%); background: #ffda23; border-color: #ffda23; color: #101d25; }
+.film__play[hidden] { display: none; }
+.film__skip:focus-visible, .film__play:focus-visible { outline: 3px solid #ffda23; outline-offset: 4px; }
+@media (prefers-reduced-motion: reduce) { .film::after { transition: none; } }
