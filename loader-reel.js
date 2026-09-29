@@ -36,10 +36,10 @@
   }
 
   function updateProgress() {
-    const duration = Number.isFinite(video.duration) && video.duration > 0 ? video.duration : 19.041667;
+    const duration = Number.isFinite(video.duration) && video.duration > 0 ? video.duration : 16.5;
     const ratio = Math.min(1, video.currentTime / duration);
     progress.style.width = `${Math.round(ratio * 100)}%`;
-    const clip = ratio < 8 / 19.041667 ? '02' : ratio < 14.541667 / 19.041667 ? '03' : '04';
+    const clip = video.currentTime < 8 ? '02' : video.currentTime < 14.541667 ? '03' : '04';
     count.textContent = `${clip} / 04 · ${Math.round(ratio * 100)}%`;
   }
   video.addEventListener('timeupdate', updateProgress);

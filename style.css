@@ -343,8 +343,8 @@ button,.button,input,select,textarea{border-radius:0}
 .machine-atropos .machine-model{color:#acb8be;text-shadow:0 2px 14px #07141d80}
 @media(max-width:620px){.brand-background .fleet,.brand-background .work{background-attachment:scroll,scroll;background-size:cover,auto 100svh;background-repeat:no-repeat,repeat-y}.brand-background .faq::before{opacity:.72}.brand-background .faq::after{background:#f1f4f5d6}}
 
-/* Clip 4's final frame stays over the live grid until its logo becomes DOM UI. */
-.reel-entry-frame{position:fixed;inset:0;z-index:99997;background:#14232b url('assets/ligarent-loader-last-720p.jpg') center/cover no-repeat;pointer-events:none;will-change:opacity}
+/* Hold the clean sign frame until its mark becomes live DOM UI. */
+.reel-entry-frame{position:fixed;inset:0;z-index:99997;background:#06090a url('assets/ligarent-loader-clean-last-720p.jpg') center/cover no-repeat;pointer-events:none;will-change:opacity}
 .reel-entry-curtain{position:fixed;inset:0;z-index:99998;background:#101d25;opacity:0;pointer-events:none;will-change:opacity}
 .reel-entry-logo{position:fixed!important;top:0;left:0;z-index:99999;margin:0!important;opacity:0;pointer-events:none;transform-origin:top left;will-change:transform,opacity}
 @media(prefers-reduced-motion:reduce){.reel-entry-frame,.reel-entry-curtain,.reel-entry-logo{display:none!important}}
