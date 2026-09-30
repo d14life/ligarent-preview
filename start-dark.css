@@ -350,3 +350,37 @@ body.is-loading { overflow: hidden; }
 .opening-reel__progress { position: absolute; inset: auto 0 0; height: 3px; background: #f6f7f740; }
 .opening-reel__progress span { display: block; width: 0; height: 100%; background: var(--yellow); }
 @media (prefers-reduced-motion: reduce) { .opening-reel { display: none; } }
+
+/* Supplied LIGARENT sign replaces the earlier generated wordmark. */
+.poster__brand {
+  width: clamp(142px, 12vw, 188px);
+  aspect-ratio: 944 / 240;
+  padding: 0;
+  border: 0;
+  overflow: hidden;
+  background: url('assets/ligarent-sign.png?v=1') center / 100% 100% no-repeat;
+  color: transparent;
+  font-size: 0;
+  line-height: 0;
+  text-indent: 100%;
+  white-space: nowrap;
+}
+.site-root .site-brand .logo {
+  width: clamp(142px, 12vw, 188px);
+  aspect-ratio: 944 / 240;
+  margin-left: 0;
+  padding: 0;
+  border: 0;
+  background: url('assets/ligarent-sign.png?v=1') center / 100% 100% no-repeat;
+  color: transparent;
+  font-size: 0;
+  line-height: 0;
+  text-indent: 100%;
+  white-space: nowrap;
+}
+.site-root .site-brand .logo::before,
+.site-root .site-brand .logo::after { content: none; display: none; }
+@media(max-width:600px) {
+  .poster__brand,
+  .site-root .site-brand .logo { width: 132px; }
+}
