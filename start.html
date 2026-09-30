@@ -8,21 +8,21 @@
   <title>LIGARENT — Двигаем грунт в срок</title>
   <script>if (new URLSearchParams(location.search).has('reverse')) document.documentElement.classList.add('intro-returning');</script>
   <link rel="preload" as="image" href="assets/ligarent-loader-first.jpg" fetchpriority="high">
-  <link rel="preload" as="image" href="assets/intro-sequence/desktop/frame-000.webp?v=20260929-4k-16fps-27" media="(min-width: 601px), (orientation: landscape)" fetchpriority="high">
-  <link rel="preload" as="image" href="assets/intro-sequence/mobile/frame-000.webp?v=20260929-4k-16fps-27" media="(max-width: 600px) and (orientation: portrait)" fetchpriority="high">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto+Condensed:wght@700;900&family=Roboto:wght@400;700;900&display=swap" media="print" onload="this.media='all'">
   <link rel="preload" as="image" href="assets/ligarent-sign.png?v=1">
-  <link rel="stylesheet" href="start-dark.css?v=20260930-logo-1">
+  <link rel="stylesheet" href="start-dark.css?v=20260930-fast-intro-1">
   <script src="vendor/gsap.min.js" defer></script>
-  <script src="loader-reel.js?v=20260929-4k-16fps-27" defer></script>
-  <script src="site-embed.js?v=20260929-handoff-1" defer></script>
-  <script src="start.js?v=20260929-autofinish-1" defer></script>
+  <script src="loader-reel.js?v=20260930-fast-intro-1" defer></script>
+  <script src="site-embed.js?v=20260930-fast-intro-1" defer></script>
+  <script src="start.js?v=20260930-fast-intro-1" defer></script>
 </head>
 <body class="is-loading" data-site-url="./site.html?v=20260930-enquiry-2">
   <div class="opening-reel" id="opening-reel" role="status" aria-label="Вступительные кадры" aria-busy="true">
-    <video id="opening-video" data-src="assets/ligarent-loader-clips-234-clean-720p.mp4" poster="assets/ligarent-loader-first.jpg" muted playsinline preload="auto" aria-hidden="true"></video>
+    <video id="opening-video" src="assets/ligarent-loader-clips-234-fast-720p.mp4" poster="assets/ligarent-loader-first.jpg" muted playsinline preload="auto" aria-hidden="true"></video>
     <span class="opening-reel__count" id="opening-count" aria-live="off">02 / 04 · 0%</span>
+    <a class="opening-reel__skip" href="./site.html">Пропустить видео →</a>
     <span class="opening-reel__progress" aria-hidden="true"><span id="opening-progress"></span></span>
   </div>
   <div class="site-root" id="site-root" inert aria-hidden="true"></div>

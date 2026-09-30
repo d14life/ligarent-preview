@@ -28,7 +28,7 @@
   // Decode once so forward and reverse motion draw prepared frames instead of
   // seeking through a video on every gesture.
   const sequenceSize = innerWidth <= 600 && innerHeight > innerWidth ? 'mobile' : 'desktop';
-  const FRAME_COUNT = 116;
+  const FRAME_COUNT = 59;
   const FIRST_CLIP_END = 7.25;
   // A single ordinary finger swipe should cover the short first clip.
   const SCROLL_PIXELS_PER_SECOND = 26;
@@ -37,6 +37,7 @@
   let drawnFrame = -1;
   let assetsReady = false;
   let sequenceFailed = false;
+  let sequenceStarted = false;
   let leadDistance = 0;
   let filmDistance = 0;
   let filmEnd = 0;
@@ -62,7 +63,7 @@
 
   async function preloadSequence() {
     if (reduceMotion) return;
-    const response = await fetch(`assets/intro-sequence/${sequenceSize}.frames?v=20260929-4k-16fps-27`, { cache: 'force-cache' });
+    const response = await fetch(`assets/intro-sequence/${sequenceSize}.frames?v=20260930-fast-intro-1`, { cache: 'force-cache' });
     if (!response.ok) throw new Error('Intro frames unavailable');
     const buffer = await response.arrayBuffer();
     const view = new DataView(buffer);
@@ -99,6 +100,8 @@
   }
 
   async function prepareSequence() {
+    if (sequenceStarted) return;
+    sequenceStarted = true;
     let timeoutId;
     try {
       await Promise.race([
@@ -107,6 +110,8 @@
       ]);
       assetsReady = true;
       trigger.disabled = false;
+      trigger.querySelector('span').textContent = 'Прокрутите вниз';
+      trigger.setAttribute('aria-label', 'Прокрутить к началу интро');
       updateScrollLayout();
       renderScroll();
       document.documentElement.classList.remove('intro-returning');
@@ -408,8 +413,7 @@
   }
 
   trigger.addEventListener('click', () => {
-    if (sequenceFailed) { location.href = siteUrl; return; }
-    if (!assetsReady) return;
+    if (sequenceFailed || !assetsReady) { location.href = siteUrl; return; }
     introPosition = leadDistance;
     renderScroll();
     autoFinish(1);
@@ -426,7 +430,11 @@
   addEventListener('wheel', event => {
     if (event.ctrlKey || editor.contains(event.target)) return;
     if (siteActive && (event.deltaY >= 0 || scrollY > 1 || document.body.classList.contains('menu-active') || event.target.closest('input, textarea, select, [contenteditable], .full-menu'))) return;
-    if (!assetsReady && !sequenceFailed) { event.preventDefault(); return; }
+    if (!assetsReady && !sequenceFailed) {
+      event.preventDefault();
+      if (event.deltaY > 0 && document.getElementById('opening-reel')?.hidden) location.href = siteUrl;
+      return;
+    }
     if (sequenceFailed) { if (event.deltaY > 0) location.href = siteUrl; return; }
     event.preventDefault();
     const unit = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? innerHeight : 1;
@@ -439,7 +447,10 @@
     if (delta === undefined || sequenceFailed) return;
     if (siteActive && (delta >= 0 || scrollY > 1 || document.body.classList.contains('menu-active'))) return;
     event.preventDefault();
-    if (!assetsReady) return;
+    if (!assetsReady) {
+      if (delta > 0 && document.getElementById('opening-reel')?.hidden) location.href = siteUrl;
+      return;
+    }
     autoFinish(Math.sign(delta));
   });
   // A finger gesture selects the endpoint. An opposite gesture turns the
@@ -473,14 +484,27 @@
       }
       return;
     }
-    if (!assetsReady && !sequenceFailed) { event.preventDefault(); return; }
+    if (!assetsReady && !sequenceFailed) {
+      event.preventDefault();
+      if (delta > 0 && document.getElementById('opening-reel')?.hidden) location.href = siteUrl;
+      return;
+    }
     if (sequenceFailed) return;
     event.preventDefault();
     steerTouch(delta);
   }, { passive: false });
   for (const type of ['touchend', 'touchcancel']) addEventListener(type, () => { touchY = null; touchIntent = 0; touchStartedOnIntro = false; }, { passive: true });
   addEventListener('resize', () => { updateScrollLayout(); scheduleRender(); }, { passive: true });
-  document.addEventListener('intro-loader-ready', renderScroll);
+  document.addEventListener('intro-loader-ready', () => {
+    if (!assetsReady && !sequenceFailed) {
+      trigger.disabled = false;
+      trigger.querySelector('span').textContent = 'Открыть сайт';
+      trigger.setAttribute('aria-label', 'Открыть сайт напрямую');
+      prepareSequence();
+    }
+    renderScroll();
+  });
+  document.addEventListener('intro-loader-playing', prepareSequence, { once: true });
   document.addEventListener('ligarent-site-ready', () => { sitePrepared = true; renderScroll(); scheduleAutoFrame(); });
   document.addEventListener('ligarent-site-failed', () => {
     if (autoTarget === totalDistance) location.href = siteUrl;
@@ -488,5 +512,7 @@
   updateScrollLayout();
   if (returningFromSite) introPosition = clamp(totalDistance - reverseAmount, 0, totalDistance - 1);
   trigger.disabled = true;
-  prepareSequence();
+  const openingVideo = document.getElementById('opening-video');
+  if (returningFromSite || reduceMotion || document.getElementById('opening-reel')?.hidden ||
+      (openingVideo?.readyState >= 2 && !openingVideo.paused)) prepareSequence();
 })();

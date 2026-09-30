@@ -29,7 +29,7 @@
   }
 
   let closing = false;
-  const safetyTimer = setTimeout(() => finish(false), 12000);
+  const safetyTimer = setTimeout(() => finish(false), 8000);
   function finish(animate) {
     if (closing) return;
     closing = true;
@@ -113,12 +113,17 @@
   }
 
   function updateProgress() {
-    const duration = Number.isFinite(video.duration) && video.duration > 0 ? video.duration : 16.5;
+    const duration = Number.isFinite(video.duration) && video.duration > 0 ? video.duration : 5.5;
     const ratio = Math.min(1, video.currentTime / duration);
     progress.style.width = `${Math.round(ratio * 100)}%`;
-    const clip = video.currentTime < 8 ? '02' : video.currentTime < 14.541667 ? '03' : '04';
+    const clip = video.currentTime < 8 / 3 ? '02' : video.currentTime < 14.541667 / 3 ? '03' : '04';
     count.textContent = `${clip} / 04 · ${Math.round(ratio * 100)}%`;
   }
+  video.addEventListener('waiting', () => { count.textContent = 'Загружаем видео…'; });
+  video.addEventListener('playing', () => {
+    updateProgress();
+    document.dispatchEvent(new Event('intro-loader-playing'));
+  }, { once: true });
   video.addEventListener('timeupdate', updateProgress);
   video.addEventListener('ended', () => { updateProgress(); finish(true); });
   video.addEventListener('error', () => finish(false));
@@ -135,7 +140,5 @@
     if (['ArrowDown', 'ArrowUp', 'PageDown', 'PageUp', 'Home', 'End', ' '].includes(event.key)) blockScroll(event);
   }, true);
 
-  video.src = video.dataset.src;
-  video.playbackRate = 3;
   video.play().catch(() => finish(false));
 })();

@@ -3,6 +3,27 @@
   const source = document.body.dataset.siteUrl || './site.html';
   window.ligarentSiteStatus = 'loading';
 
+  // Let the opening poster and first moving frame get the network first.
+  const waitForOpeningFrame = () => new Promise(resolve => {
+    const reel = document.getElementById('opening-reel');
+    const video = document.getElementById('opening-video');
+    if (!reel || reel.hidden || matchMedia('(prefers-reduced-motion: reduce)').matches ||
+        (video?.readyState >= 2 && !video.paused)) { resolve(); return; }
+    let settled = false;
+    let timer;
+    const ready = () => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      document.removeEventListener('intro-loader-playing', ready);
+      document.removeEventListener('intro-loader-ready', ready);
+      resolve();
+    };
+    document.addEventListener('intro-loader-playing', ready, { once: true });
+    document.addEventListener('intro-loader-ready', ready, { once: true });
+    timer = setTimeout(ready, 1200);
+  });
+
   const loadStyle = href => new Promise((resolve, reject) => {
     const link = document.createElement('link');
     link.rel = 'stylesheet';
@@ -21,6 +42,7 @@
   });
 
   window.ligarentSiteReady = (async () => {
+    await waitForOpeningFrame();
     const response = await fetch(source, { cache: 'force-cache' });
     if (!response.ok) throw new Error(`Site returned ${response.status}`);
     const page = new DOMParser().parseFromString(await response.text(), 'text/html');
