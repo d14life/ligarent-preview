@@ -366,9 +366,9 @@ button,.button,input,select,textarea{border-radius:0}
 
 @media(max-width:760px){.site-page-count{display:none}}
 
-/* The enquiry remains a full-width form without the decorative machine drawing. */
-.enquiry .split{grid-template-columns:minmax(0,1fr)}
-.enquiry #enquiry-form{width:100%;max-width:1000px}
+/* Keep the project details together in one readable column. */
+.enquiry #enquiry-form{width:100%;max-width:680px;margin-inline:auto}
+.enquiry .form-footer{text-align:left}
 
 /* Condensed Cyrillic typography: lean industrial display with readable supporting copy. */
 :root{--font-display:'Oswald','Roboto Condensed',Arial,sans-serif;--font-body:'Roboto Condensed',Arial,sans-serif}
