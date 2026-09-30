@@ -1,11 +1,11 @@
 (() => {
   const pages = [
-    {id:'machines',label:'Машины',teaser:'CAT D6R · D7R · D8R',image:'assets/d6r-no-rods.png'},
-    {id:'selection',label:'Подбор',teaser:'ПОДОБРАТЬ ПОД ЗАДАЧУ',image:'assets/d7r.png'},
+    {id:'machines',label:'Машины',teaser:'CAT D6R · D7R · D8R',image:'assets/d6r-no-rods.webp'},
+    {id:'selection',label:'Подбор',teaser:'ПОДОБРАТЬ ПОД ЗАДАЧУ',image:'assets/d7r.webp'},
     {id:'work',label:'Виды работ',teaser:'ЗЕМЛЯ · ДОРОГИ · СНЕГ',image:'assets/work-0.jpg'},
     {id:'geography',label:'Зоны выезда',teaser:'ТАТАРСТАН · БАШКОРТОСТАН',image:''},
-    {id:'faq',label:'Вопросы',teaser:'ОТВЕТЫ ДО ЗАКАЗА',image:'assets/bulldozer-front.png'},
-    {id:'enquiry',label:'Заявка',teaser:'РАССКАЖИТЕ ПРО ОБЪЕКТ',image:'assets/d8r.png'}
+    {id:'faq',label:'Вопросы',teaser:'ОТВЕТЫ ДО ЗАКАЗА',image:'assets/bulldozer-front.webp'},
+    {id:'enquiry',label:'Заявка',teaser:'РАССКАЖИТЕ ПРО ОБЪЕКТ',image:'assets/d8r.webp'}
   ];
   const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const header = document.createElement('header');
