@@ -59,6 +59,7 @@
       const src = script.getAttribute('src');
       // The embedded page uses the same scroll controller as the intro.
       if (src.includes('site-return.js')) continue;
+      if (window.ligarentI18n && /(?:translations|language)\.js/.test(src)) continue;
       if (src.includes('gsap.min.js') && window.gsap) continue;
       await loadScript(src);
     }
