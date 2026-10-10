@@ -213,23 +213,18 @@ if(!matchMedia('(prefers-reduced-motion: reduce)').matches){
 document.querySelector('#enquiry-form').addEventListener('submit',e=>{
   e.preventDefault();
   const data=Object.fromEntries(new FormData(e.currentTarget));
-  const contacts=[
-    ...(data.contactName.trim()?[`Имя или компания: ${data.contactName.trim()}`]:[]),
-    ...(data.phone.trim()?[`Телефон: ${data.phone.trim()}`]:[]),
-    ...(data.whatsapp.trim()?[`WhatsApp: ${data.whatsapp.trim()}`]:[])
-  ];
-  const lines=[
-    'Здравствуйте! Хочу обсудить аренду бульдозера.',
-    '',
-    ...contacts,
-    ...(contacts.length?['']:[]),
-    `Описание объекта: ${data.description.trim()}`,
-    ...(data.volume?[`Примерно сколько тонн: ${data.volume}`]:[]),
-    `Расположение объекта: ${data.location.trim()}`,
-    ...(data.machine?[`Модель бульдозера: ${data.machine}`]:[])
-  ];
   const url=new URL('https://t.me/ligarent');
-  url.searchParams.set('text',lines.join('\n'));
+  // Translate only our labels, never user-entered project or contact details.
+  const tr = text => window.ligarentI18n?.translate(text) ?? text;
+  const localizedLines = [tr('Здравствуйте! Хочу обсудить аренду бульдозера.'), '',
+    ...(data.contactName.trim() ? [tr('Имя или компания:') + ' ' + data.contactName.trim()] : []),
+    ...(data.phone.trim() ? [tr('Телефон:') + ' ' + data.phone.trim()] : []),
+    ...(data.whatsapp.trim() ? ['WhatsApp: ' + data.whatsapp.trim()] : []),
+    '', tr('Описание объекта') + ': ' + data.description.trim(),
+    ...(data.volume ? [tr('Примерно сколько тонн') + ': ' + data.volume] : []),
+    tr('Расположение объекта') + ': ' + data.location.trim(),
+    ...(data.machine ? [tr('Модель бульдозера:') + ' ' + data.machine] : [])];
+  url.searchParams.set('text',localizedLines.join('\n'));
   document.querySelector('#form-status').textContent='Открываем Telegram. Отправьте готовое сообщение в чате @ligarent.';
   window.location.assign(url.toString());
 });

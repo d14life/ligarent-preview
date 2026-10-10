@@ -1,0 +1,12 @@
+/* Existing LIGARENT navy/yellow palette; native select supports keyboard and touch. */
+.language-control{position:fixed;right:max(16px,env(safe-area-inset-right));bottom:max(16px,env(safe-area-inset-bottom));z-index:1500;display:flex;align-items:center;gap:8px;background:#101d25;color:#ffda24;border:1px solid #ffda24;padding:0 12px;box-shadow:0 3px 14px #0003;font:700 14px Roboto,system-ui,sans-serif}
+.language-control select{font:inherit;min-height:44px;max-width:140px;color:inherit;background:#101d25;border:0;cursor:pointer;padding:0 5px}
+.language-control select:focus-visible{outline:2px solid #ffda24;outline-offset:3px}
+body.menu-active .language-control{visibility:hidden}
+html:not([lang="ru"]) .poster__headline{font-size:clamp(38px,6.2vw,108px)}
+html[lang="zh"]{font-family:Roboto,"Noto Sans SC","Microsoft YaHei",system-ui,sans-serif}
+@media(max-width:620px){.language-control{right:10px;bottom:max(10px,env(safe-area-inset-bottom))}.language-control select{max-width:110px}html:not([lang="ru"]) .poster__headline{font-size:clamp(32px,8vw,54px)}}
+html[lang="zh"] .poster__headline{font-family:"Noto Sans SC","Microsoft YaHei",system-ui,sans-serif;line-height:1.08}
+html[lang="tt"] .poster__headline{font-family:'Roboto Condensed',Roboto,system-ui,sans-serif;font-weight:700;line-height:1.05}
+.poster__scroll{right:190px}
+.poster__details strong{color:#fff}
